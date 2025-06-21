@@ -1,36 +1,60 @@
-% Test of calc_powerSpectra function (simplified Chahuara code)
-% USING DATA SIMU KWAVE POWER LAW COLOURATION
-% JOURNAL DOF 06/2025
+% General Description: 
+% *** Script for DoF test in Power Law Simulation using Regularized Power Law TV (by H. Chahuara)
+% *** All results (metrics Table and figures can be saved in "dirOutcomes"
+% Data Description:
+% *** RF data from UIUC acq by SonixOne p1-p2 from 10.1109/TUFFC.2023.3245988
+% *** theoretical BSC by Faran Theory 
+% *** (check function duke_bsc_faranTheory, this requires faran_coeffs.mat)
+% *** Data is saved in NAS2 'Q:\emiranda\data4Prociencia\phantoms'
+% Requirements
+% *** utilsPowerLaw, utilsRPLTV, utilsBSC, utilsUS, utilsMetrics, init.m
+% Author:
+% *** EAMZ based on LIM codes
+% Date: W3M06Y25
 
-%%
-clear all, 
-% clc, 
+%%%%%% MANUAL FIT FROM REFERENCE PHANTOM METHOD
+% -----RPM PowLaw (b.(f.^n))-----
+% Δb           = 15.294266
+% b_s/b_r [dB] = 11.845286
+% Δn           = -1.175598
+% ---------
+% -----RPM Gauss (g.exp(-s.f^2))-----
+% d_g          = 6.016284
+% g_s/g_r [dB] = 7.793283
+% Δs           = 0.032991
+
+%% INITIALIZATION
+init
 warning('off');
-% close all;
 
-methodsRegu = true;
-% methodsRegu = false;
+%% PARAMETERS
 
-addpath(genpath(pwd))
-
+% Important constants
 Np2dB           = 20*log10(exp(1));
 dB2Np           = 1/Np2dB;
-range_bmode     = [-60 0];
+range_bmode     = [-80 0];
 
-plotBmode       = false;
-plotBSCdB       = true;
-plotMaps        = false;
-saveOutcomes    = false;
+% Options
+saveOutcomes    = true; % save data
 
+methodsRegu     = true;  % regularization activater RPL
+plotBmode       = false; % plot bmode sample and reference ROI
+plotBmodeOverl  = true;  % plot bmode overlay with colorimage
+plotBSCdB       = true;  % plot \Delta b in dB
+plotMaps        = false; % plot maps using imagesc
+bsc_gt_by_rpm   = true;  % calculate GT by Reference Phantom Method
+manualroi       = false;
+
+% Directory outcomes (can be changed)
 if saveOutcomes % (FIGURES & METRICS)
-    dirOutcomes = './out/JournalDoF/simuPowLaw/vAC';
+    dirOutcomes = './out/PROCIENCIA_Hito/phantomUIUC/';
     if (~exist(dirOutcomes)); mkdir (dirOutcomes); end
 end
 
-% Data Directories
-pathData        = 'D:\emirandaz\qus\data\NonuniformBSC2D_2025';
-folderDataSam   = 'dx_18p75um';
-folderDataRef   = 'dx_18p75um';
+% Data Directories (can be changed)
+dirData         = 'Q:\emiranda\data4Prociencia\phantoms'; % NAS2
+folderDataSam   = 'UIUC';
+folderDataRef   = 'UIUC';
 
 methods = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
 
@@ -38,67 +62,99 @@ methods = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
 label_methods = {'3-DoF', '2-DoF_{b,n}', '2-DoF_{n,a}', '2-DoF_{b,a}'}; 
 
 % First row for headers, second for data
-bsc_results     = cell(2, length(methods)); 
-maps_results    = cell(2, length(methods));
+bsc_results  = cell(2, length(methods)); 
+maps_results = cell(2, length(methods));
 
-% Store headers
-bsc_results(1, :)   = {sprintf('3-DoF'), sprintf('2-DoF "a"'), sprintf('2-DoF "b"'),  sprintf('2-DoF "n"')};
-maps_results(1, :)  = {sprintf('3-DoF'), sprintf('2-DoF "a"'), sprintf('2-DoF "b"'),  sprintf('2-DoF "n"')};
+bsc_results(1, :)  = {sprintf('3-DoF'), sprintf('2-DoF "a"'), sprintf('2-DoF "b"'),  sprintf('2-DoF "n"')};
+maps_results(1, :) = {sprintf('3-DoF'), sprintf('2-DoF_{b,n}'), sprintf('2-DoF_{n,a}'),  sprintf('2-DoF_{b,a}')};
+
 %% LOAD DATA
+numPhantomSam = '1'; 
+numPhantomRef = '2';
 
-alpha_sam   = 0.6;
-b_sam       = 0.01;
-n_sam       = 1.5;
-j_sam       = 1.0;
+j_sam = 1.0;
+j_ref = 1.0;
 
-alpha_ref   = 0.4;
-b_ref       = 1;
-n_ref       = 0;
-j_ref       = j_sam;
-
-rf_sam_name     = 'rf_sd2pcSCALE4_bsc3_att0p6b0.01n1.5';
-SAM             = load(fullfile(pathData, folderDataSam, rf_sam_name));
-
-SAM.alpha_power = j_sam;
-SAM.acs         = alpha_sam; % [dB/cm/MHz] 
-
-rf_ref_name     = 'rf_sd2pcSCALE4_bsc4_att0p4b1n0';
-REF             = load(fullfile(pathData, folderDataRef, rf_ref_name)); 
-
-REF.alpha_power = j_ref; 
-REF.acs         = alpha_ref; % [dB/cm/MHz]
-
-% FROM RPM (GROUNTRUTH) ESTIMATE delta_n_prior
-switch j_sam 
-    case 1.0
-        delta_alpha_prior = alpha_sam - alpha_ref; % [dB/cm/MHz]
-        delta_b_prior     = log(b_sam / b_ref);  % ln (g_sam / g_ref) ln(0.01/1)
-        delta_n_prior     = n_sam - n_ref; % s_sam - s_ref og ACS
+% SAMPLE SPECS
+switch str2double(numPhantomSam)
+    case 1
+        alpha_sam   = 0.4; % [dB/cm/MHz]
+    case 2
+        alpha_sam   = 0.1; % [dB/cm/MHz]
+end
+% REFERENCE SPECS
+switch str2double(numPhantomRef)
+    case 1
+        alpha_ref   = 0.4; % [dB/cm/MHz]
+    case 2
+        alpha_ref   = 0.1; % [dB/cm/MHz]
 end
 
-% B-MODE CHECK
+delta_alpha_prior   = alpha_sam - alpha_ref; % [dB/cm/MHz]
+% delta_b_prior       = log(db2pow(11.845286)); % from RPM method
+delta_b_prior       = log(db2pow(15.1)); % from RPM method the best
+delta_n_prior       = -1.175598; % from RPM method
 
-bmode_sam = db(abs(hilbert(SAM.rf)));
+% STABLE
+samName = ['rf_phantom', numPhantomSam];
+SAM     = load (fullfile(dirData, folderDataSam, samName));
+% SAM.rf  = SAM.rf(:,:,end-9:end); % Last frames 
+SAM.acs = alpha_sam;
+
+refName = ['rf_phantom', numPhantomRef];
+REF     = load (fullfile(dirData, folderDataRef, refName));
+% REF.rf  = REF.rf(:,:,end-9:end); % Last frames 
+REF.acs = alpha_ref;
+
+% B-MODE CHECK
+bmode_sam = db(hilbert(SAM.rf(:,:,1)));
 bmode_sam = bmode_sam - max(bmode_sam(:));
 
-bmode_ref = db(abs(hilbert(REF.rf)));
+bmode_ref = db(hilbert(REF.rf(:,:,1)));
 bmode_ref = bmode_ref - max(bmode_ref(:));
 
+%% ROI SELECTION
+
+if ~manualroi
+
+    pars.x_roi       = [-15 15]*1E-3; % [m] 
+    pars.z_roi       = [5 35]*1E-3; % [m] % Same than sonix
+    
+else 
+
+    figure('Units','centimeters', 'Position',[5 5 15 15]),
+    imagesc(SAM.x*1E3, SAM.z*1E3,bmode_sam,range_bmode);
+    colormap gray; clim(range_bmode);
+    hb2=colorbar; ylabel(hb2,'dB')
+    xlabel('Lateral [mm]'), ylabel('Depth [mm]'); 
+    title('Bmode')
+    
+    confirmation = '';
+    while ~strcmp(confirmation,'Yes')
+        rect = getrect;
+        confirmation = questdlg('Sure?');
+        if strcmp(confirmation,'Cancel')
+            disp(rect)
+            break
+        end
+    end
+    close,
+
+    pars.x_roi     = [rect(1), rect(1)+rect(3)]*1E-3; % [m]
+    pars.z_roi     = [rect(2), rect(2)+rect(4)]*1E-3; % [m]
+end
+
 %% SPECTRAL METHOD PARAMETERS
-pars.P           = 2048;  % NFFT only for calculate BSC_delta_b_priorRPM_ok 10wl
-pars.bw          = [3 9]; % [MHz]
+
+pars.P           = 512; % NFFT for 10wl is 256, 20wl 512
+pars.bw          = [2 7.5]; % [MHz]
 pars.overlap     = 0.8;
-pars.blocksize   = 12; % wavelengths
-
-% % NEW JUNE source 100 kPa
-pars.z_roi       = [10 40]*1E-3;
-pars.x_roi       = [-15 15]*1E-3; 
-pars.bw          = [3.5 8.5];
-
+pars.blocksize   = 10; % wavelengths
 pars.window_type = 3; %  (1) Hanning, (2) Tuckey, (3) Hamming, (4) Tchebychev
-pars.saran_layer = true;
+pars.saran_layer = false;
 
 if (plotBmode)
+deadBand = 0.1e-2;
 figure,
 
 subplot(121), 
@@ -109,7 +165,8 @@ clim(range_bmode)
 cb = colorbar;
 cb.Label.String = 'dB'; % Add the label "dB"
 xlabel('Lateral [mm]'), ylabel('Depth [mm]');
-title('SAM')
+title(['SAM', ' P', numPhantomSam])
+% ylim([deadBand*1000 50])
 colormap('gray')
 
 subplot(122), 
@@ -120,59 +177,90 @@ clim(range_bmode)
 cb = colorbar;
 cb.Label.String = 'dB'; % Add the label "dB"
 xlabel('Lateral [mm]'), ylabel('Depth [mm]');
-title('REF')
+title(['REF', ' P', numPhantomRef])
 colormap('gray')
+% ylim([deadBand*1000 50])
 end
+
 %% POWER SPECTRA ESTIMATION
 % spectralData_sam = calc_powerSpectra(SAM, pars);
 spectralData_sam = calc_powerSpectra_vSimple(SAM, pars); % @
 S_sam = spectralData_sam.powerSpectra;
 
+num_ref = 1;
+
 % spectralData_ref = calc_powerSpectra(REF, pars);
 spectralData_ref = calc_powerSpectra_vSimple(REF, pars); % @
 S_ref = spectralData_ref.powerSpectra;
 
-% Ratio Computation
 SR_emz = S_sam ./ S_ref;
 
 SR = permute(SR_emz,[3,1,2]); clear SR_emz
 
-%% EXTRA $ EMZ TO PLOT Spectrum at given position
-% z_target = 1.5E-3;
-% x_target = 0E-3;
-% 
-% [~, i_idx] = min(abs(spectralData_sam.depth   - z_target)); % $
-% [~, j_idx] = min(abs(spectralData_sam.lateral - x_target)); % $
-% 
-%  SS_idx = squeeze(S_sam(i_idx,j_idx,:));
-%  SR_idx = squeeze(S_ref(i_idx,j_idx,:));
-% 
-% figure, 
-% plot(spectralData_sam.band, SS_idx, 'DisplayName', 'Ssam'), hold on, grid on
-% plot(spectralData_sam.band, SR_idx, 'DisplayName', 'Sref'), hold off
-% legend('Location','best');
+%% BSC RPM (GT)
 
-%% GENERAL REGULARIZATION SETTINGS
+if (bsc_gt_by_rpm)
+BSC     = calculateBSC_RPM_fast(SAM, REF, pars); % fast TBD**
+% bsc_rpm = BSC.BSCcurve_Uni(:,1); % mean
+bsc_rpm = BSC.BSCcurve_Uni(:,2); % median
+freq    = BSC.band;
+
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
+% Perform linear regression  ln(bsc) = d_n . ln(f) + ln(d_b) 
+coeffs   = polyfit(log(freq), log(bsc_rpm), 1); % Fit y = mx + c
+d_n      = coeffs(1); % Slope = d_n
+ln_db    = coeffs(2); % Intercept = ln(d_b) 
+d_b      = exp(ln_db); % 
+
+% Display results
+fprintf('-----RPM PowLaw (b.(f.^n))-----\n')
+fprintf('Δb           = %f\n', d_b);
+fprintf('b_s/b_r [dB] = %f\n', 10*log10(d_b));
+fprintf('Δn           = %f\n', d_n);
+fprintf('---------\n')
+
+bsc_rpm_powlaw = d_b*(freq.^d_n);
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%% GAUSSIAN %%%%%%%%%%%%%%%%%
+
+% Perform linear regression  bsc = d_s . f^2 + ln(d_g) 
+coeffs   = polyfit(-freq.^2, log(bsc_rpm), 1); % Fit y = mx + c
+d_s      = coeffs(1); % Slope = d_s -0.0319 (mean), -0.0317 (median)
+ln_dg    = coeffs(2); % Intercept = ln(d_g) 
+d_g      = exp(ln_dg); % 1.0917 (mean), 0.9079(median)
+
+% Display results
+fprintf('-----RPM Gauss (g.exp(-s.f^2))-----\n')
+fprintf('d_g          = %f\n', d_g);
+fprintf('g_s/g_r [dB] = %f\n', 10*log10(d_g));
+fprintf('Δs           = %f\n', d_s);
+fprintf('---------\n')
+
+bsc_rpm_gauss = d_g*exp(-d_s* freq.^2);
+%%%%%%%%%%%%%%%%% GAUSSIAN %%%%%%%%%%%%%%%%%
+end
+
+%% GENERAL REGULARIZTATION SETTINGS
 % Implementation parameters
 par_rpl.tol        = 1e-16;
 par_rpl.kmax       = 100;
 par_rpl.eps_f      = 1e-16;
 par_rpl.m_est      = 0; %Robust
-par_rpl.ini_tol    = 1e-5;
-% par_rpl.df_op      = 1;
+par_rpl.ini_tol    = 1e-16;
 par_rpl.df_op      = 0;
 par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION 
 
 %% FOR BUCLE
+
 for iMet = 1:length(methods)
 
 estim_method = methods{iMet};
 
-%% COMPENSATE 2-DoF-a
+%% COMPENSATE GAUSS ATTEMPT 2-DoF-a
 if strcmp(estim_method, '2-DoF-a')
 
-    if (methodsRegu); mu_rpl_tv    = [10^3; 10^3.5; 10^4]; % [mu_b, mu_n, mu_a]
-    % if (methodsRegu); mu_rpl_tv    = [1E3; 10^3.5; 1E4]; % [mu_b, mu_n, mu_a]
+    if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 1E4]; % [mu_b, mu_n, mu_a]
     else              mu_rpl_tv    = [0.001 0.001 0.001];
     end
 
@@ -194,7 +282,7 @@ Y = log(SR_comp);
 
 % matrices for RPL-based algorithms
 X = kron( speye(p*q), ones(size(f)) );
-Z = kron( speye(p*q), log(f) );
+Z = kron( speye(p*q), log(f) ); % EMZ PowLaw  Size: [p*q*r, p*q] 
 
 % initialization for RPL-based methods
 u_0 = initialize_rpl_a_prior(Y, X, Z, mu_rpl_tv, par_rpl);
@@ -202,14 +290,9 @@ u_0 = initialize_rpl_a_prior(Y, X, Z, mu_rpl_tv, par_rpl);
 % RPL estimation
 [u_opt,~] = rpl_tv_a_prior(Y, X, Z, mu_rpl_tv, u_0, par_rpl);
 
-if par_rpl.df_op == 1
 dy = 0.5*(diag(ones(p-1,1),1) - diag(ones(p-1,1),-1));
 dy(1,1) = -1; dy(1,2) = 1; dy(end,end) = 1; dy(end,end-1) = -1;
 Dy = sparse(kron(speye(q),dy));
-else
-dy = diag(ones(p-1,1),1) - diag([ones(p-1,1);0]);
-Dy = sparse(kron(speye(q),dy)); %diag(ones(p*q -1,1),1) - diag(ones(p*q,1));    
-end
 
 % \Deltas
 g = u_opt(1:p*q);
@@ -223,11 +306,10 @@ z = 1E2*repmat(depth,1,q); % 1E2*spectralData_sam.depth * ones(1, q); % 2d array
 dz = reshape(Dy*z(:),p,q);
 dz(end,:) = dz(end-1,:);
 
-%% COMPENSATE 2-DoF-n
+%% COMPENSATE GAUSS ATTEMPT 2-DoF-n
 elseif strcmp(estim_method, '2-DoF-n')
 
-    if (methodsRegu); mu_rpl_tv    = [1E3; 10^3; 10^4.1]; % [mu_b, mu_n, mu_a]
-    % if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 1E4]; % [mu_b, mu_n, mu_a]
+    if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 1E5]; % [mu_b, mu_n, mu_a]
     else              mu_rpl_tv    = [0.001 0.001 0.001];
     end
 
@@ -266,7 +348,7 @@ g = u_opt(1:p*q);
 a = u_opt(p*q+1:2*p*q);
 
 % Prior "s"
-s = delta_n_prior*ones(p*q, 1);
+s = +delta_n_prior*ones(p*q, 1);
 
 % utils 
 z = 1E2*repmat(depth,1,q); % 1E2*spectralData_sam.depth * ones(1, q); % 2d array
@@ -275,22 +357,20 @@ dz(end,:) = dz(end-1,:);
 
 a_Np2dB = Np2dB*Dy*a./dz(:);
 
-%% COMPENSATE 2-DoF-b
+%% COMPENSATE GAUSS ATTEMPT 2-DoF-b
 elseif strcmp(estim_method, '2-DoF-b')
 
-    if (methodsRegu); mu_rpl_tv    = [1E3; 10^3; 10^4.1]; % [mu_b, mu_n, mu_a]
-    % if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 1E4]; % [mu_b, mu_n, mu_a]
+    if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 1E4]; % [mu_b, mu_n, mu_a]
     else              mu_rpl_tv    = [0.001 0.001 0.001];
     end
 
 band    = spectralData_sam.band;
 depth   = spectralData_sam.depth;
 [r,p,q] = size(SR);
-
+  
 comp_ref    = comp_ref_b_bsc(delta_b_prior);
 comp_freq_a = comp_mod_freq_a(alpha_ref,j_sam,j_ref,band,depth,q);
 
-% comp_ref = 102;
 SR_comp = SR .* comp_ref .*comp_freq_a;
 
 % indices initialization
@@ -328,11 +408,10 @@ dz(end,:) = dz(end-1,:);
 
 a_Np2dB = Np2dB*Dy*a./dz(:);
 
-%% COMPENSATE 3-DoF
+%% COMPENSATE GAUSS ATTEMPT 3-DoF
 elseif strcmp(estim_method, '3-DoF')
 
-    if (methodsRegu); mu_rpl_tv    = [10^2; 10^2.5; 10^3.95]; % [mu_b, mu_n, mu_a]
-    % if (methodsRegu); mu_rpl_tv    = [10^2; 10^2.5; 10^3.885]; % [mu_b, mu_n, mu_a]
+    if (methodsRegu); mu_rpl_tv    = [1E3; 1E3; 10^3.5]; % [mu_b, mu_n, mu_a]
     else              mu_rpl_tv    = [0.001 0.001 0.001];
     end
 
@@ -364,14 +443,9 @@ u_0 = initialize_rpl(Y, X, Z, W, mu_rpl_tv, par_rpl);
 % RPL estimation
 [u_opt,~] = rpl_tv(Y, X, Z, W, mu_rpl_tv, u_0, par_rpl);
 
-if par_rpl.df_op == 1
 dy = 0.5*(diag(ones(p-1,1),1) - diag(ones(p-1,1),-1));
 dy(1,1) = -1; dy(1,2) = 1; dy(end,end) = 1; dy(end,end-1) = -1;
 Dy = sparse(kron(speye(q),dy));
-else
-dy = diag(ones(p-1,1),1) - diag([ones(p-1,1);0]);
-Dy = sparse(kron(speye(q),dy)); %diag(ones(p*q -1,1),1) - diag(ones(p*q,1));    
-end
 
 % \Deltas
 g = u_opt(1:p*q);
@@ -414,28 +488,28 @@ end
 fprintf('-----%s---\n', estim_method);
 fprintf('α_s        : %.3f ± %.4f, %%CV = %.4f\n', round(m_a, 3), round(s_a, 4), round(cv_a, 4));
     if plotBSCdB 
-fprintf('b_s/b_r[dB]: %.3f ± %.4f, %%CV = %.4f\n', round(m_g, 3), round(s_g, 4), round(cv_g, 4));
+fprintf('Δb [dB]    : %.3f ± %.4f, %%CV = %.4f\n', round(m_g, 3), round(s_g, 4), round(cv_g, 4));
     else
-fprintf('b_s/b_r    : %.3f ± %.4f, %%CV = %.4f\n', round(m_g, 3), round(s_g, 4), round(cv_g, 4));
+fprintf('Δb         : %.3f ± %.4f, %%CV = %.4f\n', round(m_g, 3), round(s_g, 4), round(cv_g, 4));
     end
 
 fprintf('Δn         : %.4f ± %.4f, %%CV = %.4f\n', round(m_s, 4), round(s_s, 4), round(cv_s, 4));
 fprintf('--------\n');
  
 %% IMAGESC PLOTS
-Xaxis   = spectralData_ref.lateral;
-Zaxis   = spectralData_ref.depth;
-cm      = 1e2;
+Xaxis = spectralData_ref.lateral;
+Zaxis = spectralData_ref.depth;
+cm = 1e2;
 
-axis_n  = [0 1.2];
-axis_a  = [0 3];
-axis_b  = [-60 0]; % dB
+axis_n = [0 1.2];
+axis_a = [0 3];
+axis_b = [-60 0]; % dB
 fontSize = 16;
 
 if plotMaps
 figure, 
 set(gcf,'units','normalized','outerposition',[0 0.15 1 0.75]); box on;
-sgtitle(estim_method, 'FontSize', fontSize+2, 'FontWeight', 'bold');
+sgtitle(label_methods{iMet}, 'FontSize', fontSize+2, 'FontWeight', 'bold');
 
 subplot(1,3,1)
 imagesc(Xaxis*cm, Zaxis*cm, acs_sam), colorbar
@@ -463,7 +537,7 @@ axis("image");
 xlabel('Lateral [cm]'), colormap turbo;
 % title(['$\frac{g_s}{g_r}: ', num2str(round(m_g, 3)), ' \pm ', num2str(round(s_g, 2)), ', CV = ', num2str(round(cv_g, 3)), '$'], ...
 %       'Interpreter', 'latex')
-title({'$\frac{g_s}{g_r}$:', ...
+title({'$\Delta b$:', ...
        [num2str(round(m_g, 3)), ' $\pm$ ', num2str(round(s_g, 3)), ', CV = ', num2str(round(cv_g, 3))]}, ...
       'Interpreter', 'latex');
 
@@ -475,242 +549,139 @@ axis("image");
 xlabel('Lateral [cm]'), colormap turbo;
 % title(['$\Delta s$: ', num2str(round(m_s, 3)), ' $\pm$ ', num2str(round(s_s, 3)), ', CV = ', num2str(round(cv_s, 3))], ...
 %       'Interpreter', 'latex');
-title({'$\Delta s$:', ...
+title({'$\Delta n$:', ...
        [num2str(round(m_s, 3)), ' $\pm$ ', num2str(round(s_s, 3)), ', CV = ', num2str(round(cv_s, 3))]}, ...
       'Interpreter', 'latex');
 set(gca,'fontsize',fontSize)
 
 end
-%% FIGURE INTERP OVERLAY BMODE, DELTA SNR, ACS, DELTA BSC, DELTA N
-if plotBmode
+
+%% FIGURE SIMPLE OVERLAY BMODE, ACS, DELTA BSC and DELTA N
+
+if plotBmodeOverl
 fontSize = 16;
 
 figure,
 set(gcf,'units','normalized','outerposition',[0 0.1 1 0.8]); box on;
 
 tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
-sgtitle(estim_method, 'FontSize', fontSize+2, 'FontWeight', 'bold');
+sgtitle(label_methods{iMet}, 'FontSize', fontSize+2, 'FontWeight', 'bold');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% alpha_s (ACS) %%%%%%%%%%%%%%%%%%%%%%%%%%
 acs_sam = alpha_ratio + alpha_ref;
 
-units           = 1E3;
+units           = 1E2;
 bmodeFull       = bmode_sam;
-colorImg        = acs_sam;
-range_bmode     = [-100 0];
+colorImg        = bigImg(acs_sam, spectralData_sam.rf_roi);
+range_bmode     = [-60 0];
 range_img       = [0.1 1.2];
 transparency    = 0.65;
-x_img           = spectralData_sam.lateral*units;
-z_img           = spectralData_sam.depth*units;
+x_img           = spectralData_sam.x_roi*units;
+z_img           = spectralData_sam.z_roi*units;
 xFull           = SAM.x*units;
 zFull           = SAM.z*units;
-[X, Z] = meshgrid(xFull, zFull);
-roi = and(X >= x_img(1), X <= x_img(end)) & ...
-      and(Z >= z_img(1), Z <= z_img(end));
 
 t = nexttile;
-    [~,hB,hColor] = imOverlayInterp(bmodeFull, colorImg, range_bmode, range_img, ...
-                        transparency, x_img, z_img, roi, xFull, zFull);   
+    [~,hB,hColor] = imOverlaySimple(bmodeFull, colorImg, range_bmode, range_img, ...
+                        transparency, x_img, z_img, xFull, zFull);   
     hold on;
-    contour(xFull, zFull, roi, 1,'w--', 'LineWidth', 2)
+    rectangle('Position', units*[pars.x_roi(1) pars.z_roi(1) pars.x_roi(2)-pars.x_roi(1) pars.z_roi(2)-pars.z_roi(1)], ...
+        'EdgeColor','w', 'LineWidth', 2, 'LineStyle','--'), 
     hold off;
-    xlabel('Lateral'), ylabel('Depth');
+    xlabel('Lateral [cm]'), ylabel('Depth [cm]');
     hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
     title('$\alpha_s$', 'Interpreter', 'latex')
     set(gca,'fontsize',fontSize)
 %%%%%%%%%%%%%%%%%%%%%%%%%% Delta alpha (ACS) %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% Delta g (BSC) %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% Delta b (BSC) %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-units           = 1E3;
+units           = 1E2;
 bmodeFull       = bmode_sam;
-colorImg        = g_ratio;
+colorImg        = bigImg(g_ratio, spectralData_sam.rf_roi);
 range_bmode     = [-60 0];
 range_img       = [];
 transparency    = 0.65;
-x_img           = spectralData_sam.lateral*units;
-z_img           = spectralData_sam.depth*units;
+x_img           = spectralData_sam.x_roi*units;
+z_img           = spectralData_sam.z_roi*units;
 xFull           = SAM.x*units;
 zFull           = SAM.z*units;
-[X, Z] = meshgrid(xFull, zFull);
-roi = and(X >= x_img(1), X <= x_img(end)) & ...
-      and(Z >= z_img(1), Z <= z_img(end));
 
     if plotBSCdB 
-       colorImg = g_ratio_dB;
+       colorImg = bigImg(g_ratio_dB, spectralData_sam.rf_roi);
     end
 
 t = nexttile;
-    [~,hB,hColor] = imOverlayInterp(bmodeFull, colorImg, range_bmode, range_img, ...
-                        transparency, x_img, z_img, roi, xFull, zFull);
+    [~,hB,hColor] = imOverlaySimple(bmodeFull, colorImg, range_bmode, range_img, ...
+                        transparency, x_img, z_img, xFull, zFull);
     hold on;
-    contour(xFull, zFull, roi, 1,'w--', 'LineWidth', 2)
+    rectangle('Position', units*[pars.x_roi(1) pars.z_roi(1) pars.x_roi(2)-pars.x_roi(1) pars.z_roi(2)-pars.z_roi(1)], ...
+        'EdgeColor','w', 'LineWidth', 2, 'LineStyle','--'), 
     hold off;
-    xlabel('Lateral'), ylabel('Depth');
+    xlabel('Lateral [cm]'), ylabel('Depth [cm]');
     hColor.Label.String = '';
         if plotBSCdB 
             hColor.Label.String ='dB';
         end
-    title('$\frac{g_s}{g_r}$', 'Interpreter','latex')
+    % title('$\frac{b_s}{b_r}$', 'Interpreter','latex')
+    title('$\Delta b$', 'Interpreter','latex')
     set(gca,'fontsize',fontSize)
 %%%%%%%%%%%%%%%%%%%%%%%%%% Delta g ratio in dB %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% Delta s %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% Delta n %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-units           = 1E3;
+units           = 1E2;
 bmodeFull       = bmode_sam;
-colorImg        = s_ratio;
+colorImg        = bigImg(s_ratio, spectralData_sam.rf_roi);
 range_bmode     = [-60 0];
 range_img       = [];
 transparency    = 0.65;
-x_img           = spectralData_sam.lateral*units;
-z_img           = spectralData_sam.depth*units;
+x_img           = spectralData_sam.x_roi*units;
+z_img           = spectralData_sam.z_roi*units;
 xFull           = SAM.x*units;
 zFull           = SAM.z*units;
-[X, Z] = meshgrid(xFull, zFull);
-roi = and(X >= x_img(1), X <= x_img(end)) & ...
-      and(Z >= z_img(1), Z <= z_img(end));
-
 
 t = nexttile;
-    [~,hB,hColor] = imOverlayInterp(bmodeFull, colorImg, range_bmode, range_img, ...
-                        transparency, x_img, z_img, roi, xFull, zFull);
+    [~,hB,hColor] = imOverlaySimple(bmodeFull, colorImg, range_bmode, range_img, ...
+                        transparency, x_img, z_img, xFull, zFull);
     hold on;
-    contour(xFull, zFull, roi, 1,'w--', 'LineWidth', 2)
+    rectangle('Position', units*[pars.x_roi(1) pars.z_roi(1) pars.x_roi(2)-pars.x_roi(1) pars.z_roi(2)-pars.z_roi(1)], ...
+        'EdgeColor','w', 'LineWidth', 2, 'LineStyle','--'), 
     hold off;
-    xlabel('Lateral'), ylabel('Depth');
-    hColor.Label.String = '';
-    title('$\Delta s$', 'Interpreter','latex')
+    xlabel('Lateral [cm]'), ylabel('Depth [cm]');
+    hColor.Label.String = 'a.u.';
+    title('$\Delta n$', 'Interpreter','latex')
     set(gca,'fontsize',fontSize)
 %%%%%%%%%%%%%%%%%%%%%%%%%% Delta s %%%%%%%%%%%%%%%%%%%%%%%%%%
 end
 
-%% BSC RECONSTRUCTION 
-freq = spectralData_sam.band;
 
-% Typically
-g_est = mean(g_ratio(:));
-s_est = mean(s_ratio(:));
+%% SAVE ALL BSC EST GAUSS
 
-fprintf('Median Method %s | b: %.4f | n:%.4f \n', estim_method, g_est, s_est)
-fprintf('Mean Method %s | b: %.4f | n:%.4f \n', estim_method, mean(g_ratio(:)), mean(s_ratio(:)))
+% Delta_b*b_ref*f^(delta_n_prior +n_ref)
 
-% Reconstruct BSC POW LAW
-bsc_est_powlaw = g_est.*(freq.^s_est);
+freq = spectralData_sam.band; % Given choosen BW
+
+% OPTION B
+b_sam_est      = median(g_ratio, 'all');
+n_sam_est      = median(s_ratio, 'all');
+bsc_est_powlaw = b_sam_est *(freq.^n_sam_est);
+
 bsc_results{2, iMet} = bsc_est_powlaw;
 
 % SAVE ALL MAPS
-
 maps_results{2, iMet} = acs_sam; 
 maps_results{3, iMet} = g_ratio_dB; 
 maps_results{4, iMet} = s_ratio; 
 
 end
 
-%% METRICS MAPS
-
-delta_b_theo = b_sam / b_ref;
-delta_n_theo = n_sam - n_ref;
-
-% METRICS TABLE FORM (ACS)
-
-% Metricas a
-m_3dof  = get_metrics_homo_gt(maps_results{2, 1}, logical(ones(size(acs_sam))), alpha_sam, '3-DoF');
-m_2dofa = get_metrics_homo_gt(maps_results{2, 2}, logical(ones(size(acs_sam))), NaN, '2-DoF-a');
-m_2dofb = get_metrics_homo_gt(maps_results{2, 3}, logical(ones(size(acs_sam))), alpha_sam, '2-DoF-b');
-m_2dofn = get_metrics_homo_gt(maps_results{2, 4}, logical(ones(size(acs_sam))), alpha_sam, '2-DoF-n');
-
-% Extract field names
-fields  = fieldnames(m_3dof);
-
-% Create a table
-Ta = table(struct2cell(m_3dof), struct2cell(m_2dofa), ...
-    struct2cell(m_2dofb), struct2cell(m_2dofn), 'RowNames', fields, 'VariableNames', methods);
-
-% Metrics b dB
-m_3dof  = get_metrics_homo_gt(maps_results{3, 1}, logical(ones(size(acs_sam))), pow2db(delta_b_theo), '3-DoF');
-m_2dofa = get_metrics_homo_gt(maps_results{3, 2}, logical(ones(size(acs_sam))), pow2db(delta_b_theo), '2-DoF-a');
-m_2dofb = get_metrics_homo_gt(maps_results{3, 3}, logical(ones(size(acs_sam))), NaN, '2-DoF-b');
-m_2dofn = get_metrics_homo_gt(maps_results{3, 4}, logical(ones(size(acs_sam))), pow2db(delta_b_theo), '2-DoF-n');
-
-Tb = table(struct2cell(m_3dof), struct2cell(m_2dofa), ...
-    struct2cell(m_2dofb), struct2cell(m_2dofn), 'RowNames', fields, 'VariableNames', methods);
-
-% Metrics n
-m_3dof  = get_metrics_homo_gt(maps_results{4, 1}, logical(ones(size(acs_sam))), delta_n_theo, '3-DoF');
-m_2dofa = get_metrics_homo_gt(maps_results{4, 2}, logical(ones(size(acs_sam))), delta_n_theo, '2-DoF-a');
-m_2dofb = get_metrics_homo_gt(maps_results{4, 3}, logical(ones(size(acs_sam))), delta_n_theo, '2-DoF-b');
-m_2dofn = get_metrics_homo_gt(maps_results{4, 4}, logical(ones(size(acs_sam))), NaN, '2-DoF-n');
-
-Tn = table(struct2cell(m_3dof), struct2cell(m_2dofa), ...
-    struct2cell(m_2dofb), struct2cell(m_2dofn), 'RowNames', fields, 'VariableNames', methods);
-
-clear m_3dof m_2dofa m_2dofb m_2dofn
-% T = [Ta; Tb; Tn]; clear Ta Tb Tn m_3dof m_2dofa m_2dofb m_2dofn
-
-% Define the output file name
-
-% Add a new column to each table indicating its group
-Ta.Group = repmat("a", height(Ta), 1);
-Tb.Group = repmat("b", height(Tb), 1);
-Tn.Group = repmat("n", height(Tn), 1);
-
-% Reorder columns so "Group" is the first column
-Ta = movevars(Ta, 'Group', 'Before', Ta.Properties.VariableNames{1});
-Tb = movevars(Tb, 'Group', 'Before', Tb.Properties.VariableNames{1});
-Tn = movevars(Tn, 'Group', 'Before', Tn.Properties.VariableNames{1});
-
-%  Modify row names to avoid duplicates
-Ta.Properties.RowNames = strcat(Ta.Properties.RowNames, " a");
-Tb.Properties.RowNames = strcat(Tb.Properties.RowNames, " b");
-Tn.Properties.RowNames = strcat(Tn.Properties.RowNames, " n");
-
-T_combined = [Ta; Tb; Tn];
-
-%% METRICS BSC
-
-% BSC THEORETICAL
-delta_b_theo    = b_sam / b_ref;
-delta_n_theo    = n_sam - n_ref;
-bsc_delta_theo  = delta_b_theo* (freq.^delta_n_theo);
-BSC_gt          = bsc_delta_theo;
-
-bsc_delta_theo_dB = 10*log10(bsc_delta_theo);
-diff_fit_dB = @(bsc_pred, bsc_gt) mean ( abs ( 10*log10(bsc_pred) - 10*log10(bsc_gt) ) );
-
-clear m_3dof m_2dofa m_2dofb m_2dofn MetricsBSC
-m_3dof          = get_metrics_homo_gt(bsc_results{2, 1}, true(size(bsc_results{2, 1})), BSC_gt, '3-DoF');
-m_3dof.diff_dB  = diff_fit_dB(bsc_results{2, 1}, BSC_gt);
-m_3dof.param    = 'BSC';
-
-m_2dofa         = get_metrics_homo_gt(bsc_results{2, 2}, true(size(bsc_results{2, 2})), BSC_gt, '2-DoF-a');
-m_2dofa.diff_dB = diff_fit_dB(bsc_results{2, 2}, BSC_gt);
-m_2dofa.param   = 'BSC';
-
-m_2dofb         = get_metrics_homo_gt(bsc_results{2, 3}, true(size(bsc_results{2, 3})), BSC_gt, '2-DoF-b');
-m_2dofb.diff_dB = diff_fit_dB(bsc_results{2, 3}, BSC_gt);
-m_2dofb.param   = 'BSC';
-
-m_2dofn         = get_metrics_homo_gt(bsc_results{2, 4}, true(size(bsc_results{2, 4})), BSC_gt, '2-DoF-n');
-m_2dofn.diff_dB = diff_fit_dB(bsc_results{2, 4}, BSC_gt);
-m_2dofn.param   = 'BSC';
-
-% Extract field names
-fields = fieldnames(m_3dof);
-
-% Create a table
-% Tbsc = table(struct2cell(m_3dof), struct2cell(m_2dofa), ...
-%     struct2cell(m_2dofb), struct2cell(m_2dofn), 'RowNames', fields, 'VariableNames', methods);
-
-MetricsBSC(1:4) = [m_3dof; m_2dofa; m_2dofb; m_2dofn]; 
-
-Tbsc        = struct2table(MetricsBSC);
-Tbsc.method = categorical(Tbsc.method);
-Tbsc.param  = categorical(Tbsc.param);
-
 %% BOX PLOT distribution a, delta b and delta n
 
-font_size = 30;  
+font_size = 26;
+
+delta_b_theo = exp(delta_b_prior);
+delta_n_theo = delta_n_prior;
 numMethods = size(maps_results, 2); % Number of methods (iMet values)
 
 % Extract Data
@@ -737,40 +708,44 @@ method_labels = { ...
     '\mathrm{2\textrm{-}DoF}_{\mathrm{b,a}}' ...
 };
 
+%%%%%%%%%%%%%%% Box Plot a %%%%%%%%%%%%%%%
+
 % Exclude the second column in plot a
 acs_mat_filtered = acs_mat(:, [1, 3, 4]);
 method_labels_a = method_labels([1, 3, 4]);
 
-% Box Plot a
-figure;
-set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+
+figure; 
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 700, 700]); % [x, y, width, height] in pixels
 box on;
 boxplot(acs_mat_filtered, 'Labels', method_labels_a);
 % axis("image")
 yline(alpha_sam, 'k--')
+
 ax = gca;
 ax.XTickLabel = {''}; % Remove default labels
 ax.XTickLabelMode = 'manual';
 xt = get(ax, 'XTick');
 for i = 1:length(method_labels_a)
-    text(xt(i), ax.YLim(1)-0.05*diff(ax.YLim), ['$' method_labels_a{i} '$'], ...
+    text(xt(i), ax.YLim(1)-0.07*diff(ax.YLim), ['$' method_labels_a{i} '$'], ...
         'Interpreter','latex', 'HorizontalAlignment','center', 'FontSize', font_size, 'FontWeight','bold')
 end
 
-if (methodsRegu); ylim([0.22 0.92])
-else              ylim([-20 20])
-end
-title('\bf\alpha')
+% if (methodsRegu); ylim([-0.19 1.81])
+% else              ylim([-80 80])
+% end
+title('\alpha');
 ylabel('\alpha [dB\cdotcm^{-1}\cdotMHz^{-1}]');
-set(gca, 'FontSize', font_size);
+set(gca, 'FontSize', font_size, 'FontWeight','normal');
+%%%%%%%%%%%%%%% Box Plot a %%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%% Box Plot b %%%%%%%%%%%%%%%
 % Exclude the third column in plot b
 g_ratio_mat_filtered = g_ratio_mat(:, [1, 2, 4]);
 method_labels_b = method_labels([1, 2, 4]);
 
-% Box Plot b
 figure;
-set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 700, 700]); % [x, y, width, height] in pixels
 box on;
 boxplot(g_ratio_mat_filtered, 'Labels', method_labels_b);
 % axis("image")
@@ -780,24 +755,24 @@ ax.XTickLabel = {''}; % Remove default labels
 ax.XTickLabelMode = 'manual';
 xt = get(ax, 'XTick');
 for i = 1:length(method_labels_b)
-    text(xt(i), ax.YLim(1)-1.1*diff(ax.YLim), ['$' method_labels_b{i} '$'], ...
+    text(xt(i), ax.YLim(1)-0.175*diff(ax.YLim), ['$', method_labels_b{i}, '$'], ...
         'Interpreter','latex', 'HorizontalAlignment','center', 'FontSize', font_size, 'FontWeight','bold')
 end
-if (methodsRegu); ylim([-22 -19])
-else              ylim([-60 20])
-end
+ylim([5 16])
 
-title('\bf\Deltab');
+title('\Deltab');
 ylabel('\Deltab [dB]');
 set(gca, 'FontSize', font_size);
+%%%%%%%%%%%%%%% Box Plot b %%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%% Box Plot n %%%%%%%%%%%%%%%
 
 % Exclude the fourth column in plot n
 s_ratio_mat_filtered = s_ratio_mat(:, [1, 2, 3]);
 method_labels_n = method_labels([1, 2, 3]);
 
-% Box Plot n
 figure;
-set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 700, 700]); % [x, y, width, height] in pixels
 box on;
 boxplot(s_ratio_mat_filtered, 'Labels', method_labels_n);
 % axis("image")
@@ -807,15 +782,16 @@ ax.XTickLabel = {''}; % Remove default labels
 ax.XTickLabelMode = 'manual';
 xt = get(ax, 'XTick');
 for i = 1:length(method_labels_n)
-    text(xt(i), ax.YLim(1)-0.395*diff(ax.YLim), ['$' method_labels_n{i} '$'], ...
+    text(xt(i), ax.YLim(1)-0.07*diff(ax.YLim), ['$' method_labels_n{i} '$'], ...
         'Interpreter','latex', 'HorizontalAlignment','center', 'FontSize', font_size, 'FontWeight','bold')
 end
-if (methodsRegu); ylim([1.36 1.85])
-else              ylim([-15 15])
-end
-title('\bf\Deltan');
+% if (methodsRegu); ylim([-0.25 0.05]); %yticks([0:0.01:0.05])
+% else              ylim([-15 15])
+% end
+title('\Deltan');
 ylabel('\Deltan [a.u.]');
 set(gca, 'FontSize', font_size);
+%%%%%%%%%%%%%%% Box Plot n %%%%%%%%%%%%%%%
 
 function M = padconcatenation(C, padval, dim)
     % C: Cell array to concatenate
@@ -826,28 +802,102 @@ function M = padconcatenation(C, padval, dim)
     M = cell2mat(M);
 end
 
+%% METRICS MAPS TABLE FORM 
+
+clear m_3dof m_2dofa m_2dofb m_2dofn MetricsParam
+
+%%%%%%%%%%%%%%%%%%% Metricas a %%%%%%%%%%%%%%%%%%%
+m_3dof  = get_metrics_homo_gt(maps_results{2, 1}, true(size(maps_results{2, 1})), alpha_sam, '3-DoF');
+m_2dofa = get_metrics_homo_gt(maps_results{2, 2}, true(size(maps_results{2, 1})), NaN, '2-DoF-a');
+m_2dofb = get_metrics_homo_gt(maps_results{2, 3}, true(size(maps_results{2, 1})), alpha_sam, '2-DoF-b');
+m_2dofn = get_metrics_homo_gt(maps_results{2, 4}, true(size(maps_results{2, 1})), alpha_sam, '2-DoF-n');
+m_3dof.param  = 'a';
+m_2dofa.param = 'a';
+m_2dofb.param = 'a';
+m_2dofn.param = 'a';
+
+MetricsParam(1:4) = [m_3dof; m_2dofa; m_2dofb; m_2dofn];
+%%%%%%%%%%%%%%%%%%% Metricas a %%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%% Metricas b %%%%%%%%%%%%%%%%%%%
+m_3dof  = get_metrics_homo_gt(maps_results{3, 1}, true(size(maps_results{3, 1})), pow2db(delta_b_theo), '3-DoF');
+m_2dofa = get_metrics_homo_gt(maps_results{3, 2}, true(size(maps_results{3, 2})), pow2db(delta_b_theo), '2-DoF-a');
+m_2dofb = get_metrics_homo_gt(maps_results{3, 3}, true(size(maps_results{3, 3})), NaN, '2-DoF-b');
+m_2dofn = get_metrics_homo_gt(maps_results{3, 4}, true(size(maps_results{3, 4})), pow2db(delta_b_theo), '2-DoF-n');
+m_3dof.param  = 'b';
+m_2dofa.param = 'b';
+m_2dofb.param = 'b';
+m_2dofn.param = 'b';
+
+MetricsParam(5:8) = [m_3dof; m_2dofa; m_2dofb; m_2dofn];
+%%%%%%%%%%%%%%%%%%% Metricas b %%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%% Metricas n %%%%%%%%%%%%%%%%%%%
+m_3dof  = get_metrics_homo_gt(maps_results{4, 1}, true(size(maps_results{4, 1})), delta_n_theo, '3-DoF');
+m_2dofa = get_metrics_homo_gt(maps_results{4, 2}, true(size(maps_results{4, 2})), delta_n_theo, '2-DoF-a');
+m_2dofb = get_metrics_homo_gt(maps_results{4, 3}, true(size(maps_results{4, 3})), delta_n_theo, '2-DoF-b');
+m_2dofn = get_metrics_homo_gt(maps_results{4, 4}, true(size(maps_results{4, 4})), NaN, '2-DoF-n');
+m_3dof.param  = 'n';
+m_2dofa.param = 'n';
+m_2dofb.param = 'n';
+m_2dofn.param = 'n';
+
+MetricsParam(9:12) = [m_3dof; m_2dofa; m_2dofb; m_2dofn];
+%%%%%%%%%%%%%%%%%%% Metricas n %%%%%%%%%%%%%%%%%%%
+
+T_combined        = struct2table(MetricsParam);
+T_combined.method = categorical(T_combined.method);
+T_combined.param  = categorical(T_combined.param);
+
+
+%% METRICS BSC 
+
+% BSC GT
+BSC_gt          = bsc_rpm;
+BSC_gt_interp   = interp1(BSC.band, BSC_gt, spectralData_ref.band, 'linear', 'extrap');
+BSC_gt          = BSC_gt_interp;
+freq            = spectralData_ref.band;
+
+diff_fit_dB = @(bsc_pred, bsc_gt) mean ( abs ( 10*log10(bsc_pred) - 10*log10(bsc_gt) ) );
+
+clear m_3dof m_2dofa m_2dofb m_2dofn MetricsBSC
+
+m_3dof  = get_metrics_homo_gt(bsc_results{2, 1}, true(size(bsc_results{2, 1})), BSC_gt, '3-DoF');
+m_3dof.diff_dB = diff_fit_dB(bsc_results{2, 1}, BSC_gt);
+m_3dof.param = 'BSC';
+
+m_2dofa  = get_metrics_homo_gt(bsc_results{2, 2}, true(size(bsc_results{2, 2})), BSC_gt, '2-DoF-a');
+m_2dofa.diff_dB = diff_fit_dB(bsc_results{2, 2}, BSC_gt);
+m_2dofa.param = 'BSC';
+
+m_2dofb  = get_metrics_homo_gt(bsc_results{2, 3}, true(size(bsc_results{2, 3})), BSC_gt, '2-DoF-b');
+m_2dofb.diff_dB = diff_fit_dB(bsc_results{2, 3}, BSC_gt);
+m_2dofb.param = 'BSC';
+
+m_2dofn  = get_metrics_homo_gt(bsc_results{2, 4}, true(size(bsc_results{2, 4})), BSC_gt, '2-DoF-n');
+m_2dofn.diff_dB = diff_fit_dB(bsc_results{2, 4}, BSC_gt);
+m_2dofn.param = 'BSC';
+
+MetricsBSC(1:4) = [m_3dof; m_2dofa; m_2dofb; m_2dofn]; 
+
+Tbsc        = struct2table(MetricsBSC);
+Tbsc.method = categorical(Tbsc.method);
+Tbsc.param  = categorical(Tbsc.param);
+
 %%  PLOT DELTA BSC
 
-xlim_range = [3 8.71]; % X-axis limits
-ylim_range = [0.03 1]; % Y-axis limits
-
 % Define properties for customization
-line_width = 3.5; % Set line width
-font_size  = 30; % Adjust font size
+xlim_range = pars.bw + [-0.01 0.01];
+ylim_range = [10^-1 10^1]; % Y-axis limits
+line_width = 2.85; % Set line width
+font_size = 16; % Adjust font size
 
-% NRMSE
-% bsc_results{1, 1} = sprintf('3-DoF     (NRMSE = %.2f%%) \n', 100*MetricsBSC(1).rmse_homo);
-% bsc_results{1, 2} = sprintf('2-DoF_{b,n} (NRMSE = %.2f%%) \n', 100*MetricsBSC(2).rmse_homo);
-% bsc_results{1, 3} = sprintf('2-DoF_{n,a} (NRMSE = %.2f%%) \n', 100*MetricsBSC(3).rmse_homo);
-% bsc_results{1, 4} = sprintf('2-DoF_{b,a} (NRMSE = %.2f%%) \n', 100*MetricsBSC(4).rmse_homo);
-
-% GoF
 bsc_results{1, 1} = sprintf('3-DoF     (GoF_{dB} = %.2f) \n', MetricsBSC(1).diff_dB);
 bsc_results{1, 2} = sprintf('2-DoF_{b,n} (GoF_{dB} = %.2f) \n', MetricsBSC(2).diff_dB);
 bsc_results{1, 3} = sprintf('2-DoF_{n,a} (GoF_{dB} = %.2f) \n', MetricsBSC(3).diff_dB);
 bsc_results{1, 4} = sprintf('2-DoF_{b,a} (GoF_{dB} = %.2f) \n', MetricsBSC(4).diff_dB);
 
-% Convert HEX colors to RGB (MATLAB requires values between 0 and 1)
+% Convert hexadecimal colors to RGB (MATLAB requires values between 0 and 1)
 colot_gt = '#000000';  % Black
 color_1  = '#FF0000';  % 3dof
 color_2  = '#D95319';  % 2dof a
@@ -856,9 +906,8 @@ color_4  = '#77AC30';  % 2dof n
 
 % Create figure and plot data
 figure, 
-set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
-
-semilogy(freq, bsc_delta_theo, '-', 'Color', hex2rgb(colot_gt), 'LineWidth', line_width+0.5, 'DisplayName', 'GT');
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 700, 700]); % [x, y, width, height] in pixels
+semilogy(freq, BSC_gt, '-', 'Color', hex2rgb(colot_gt), 'LineWidth', line_width+0.5, 'DisplayName', 'GT');
 hold on;
 semilogy(freq, bsc_results{2, 1}, '--', 'Color', hex2rgb(color_1), 'LineWidth', line_width, 'DisplayName', bsc_results{1, 1});
 semilogy(freq, bsc_results{2, 2}, '--', 'Color', hex2rgb(color_2), 'LineWidth', line_width, 'DisplayName', bsc_results{1, 2});
@@ -872,8 +921,8 @@ xlabel('Frequency [MHz]', 'FontSize', font_size);
 ylabel('BSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
 % ylim(ylim_range);
 xlim(xlim_range);
-title('BSC', 'FontSize', font_size + 2);
-legend('Location', 'northwest', 'FontSize', font_size-7);
+title('Backscatter Coefficient (BSC)', 'FontSize', font_size + 2);
+legend('Location', 'best', 'FontSize', font_size + 2);
 set(gca, 'FontSize', font_size);
 hold off;
 
@@ -886,9 +935,6 @@ function rgb = hex2rgb(hex)
     rgb = reshape(sscanf(hex, '%2x') / 255, 1, 3);
 end
 
-%%
-keyboard
-
 %% SAVE OUTCOMES
 
 if (saveOutcomes)
@@ -896,8 +942,8 @@ if (saveOutcomes)
 % SAVE METRICS (EXCEL)
 
 %%%%%%%%%%%%%%%%%%%% MAPS %%%%%%%%%%%%%%%%%%%%
-if methodsRegu;   nameExcel = 'metricsReguok.xlsx'; 
-else     nameExcel = 'metricsNoRegu.xlsx'; 
+if methodsRegu;   nameExcel = 'metricsRegu_p1p2UIUC.xlsx'; 
+else     nameExcel = 'metricsNoRegu_p1p2UIUC.xlsx'; 
 end
 
 % Define output file name
@@ -912,8 +958,8 @@ fprintf('Table Maps Metrics saved to %s\n', excelFile);
 
 %%%%%%%%%%%%%%%%%%%% BSC PLOT %%%%%%%%%%%%%%%%%%%%
 % Write to Excel
-if methodsRegu;   nameExcel = 'metricsBSCregu_powlawSimu.xlsx'; 
-else     nameExcel = 'metricsBSCnoregu_powlawSimu.xlsx'; 
+if methodsRegu;   nameExcel = 'metricsBSCregu_p1p2UIUC.xlsx'; 
+else     nameExcel = 'metricsBSCnoregu_p1p2UIUC.xlsx'; 
 end
 
 excelFile = fullfile(dirOutcomes, nameExcel);
@@ -922,67 +968,11 @@ writetable(Tbsc, excelFile, 'Sheet', 'Metrics', 'WriteRowNames', true);
 
 fprintf('Table BSC saved to %s\n', excelFile);
 
+% SAVE FIGURES (PNG)
 
-% SAVE FIGURES (SVG + PNG)
-
-titleFigout = 'Fig';
-save_all_figures_to_directory(dirOutcomes, titleFigout, 'svg')
-
+titleFigout = 'UIUCp1p2_Fig';
+save_all_figures_to_directory(dirOutcomes, titleFigout) % 
+% save_all_figures_to_directory(dirOutcomes, titleFigout, 'svg') % 
 fprintf('Figures saved %s\n', excelFile);
 
 end
-
-%%
-keyboard
-
-%% PLOTS ACS MAPS TOGETHER
-% EXCEP PRIOR a
-fontSize = 16;
-
-figure,
-% set(gcf,'units','normalized','outerposition',[0 0.1 1 0.8]); box on;
-
-% tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact'); *old
- tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
-sgtitle('\alpha', 'FontSize', fontSize+2, 'FontWeight', 'bold');
-
-idx_m = [1, 3, 4];
-methods_alpha = methods(idx_m);
-% for iMet = 1:length(methods)*old
-for jjj = 1:length(methods_alpha)
-iMet = idx_m(jjj);
-%%%%%%%%%%%%%%%%%%%%%%%%%% alpha_s (ACS) %%%%%%%%%%%%%%%%%%%%%%%%%%
-acs_sam = alpha_ratio + alpha_ref;
-
-units           = 1E3;
-bmodeFull       = bmode_sam;
-colorImg        = maps_results{2, iMet};
-range_bmode     = [-100 0];
-range_img       = [0.1 1.2];
-transparency    = 0.65;
-x_img           = spectralData_sam.lateral*units;
-z_img           = spectralData_sam.depth*units;
-xFull           = SAM.x*units;
-zFull           = SAM.z*units;
-[X, Z] = meshgrid(xFull, zFull);
-
-roi = and(X >= x_img(1), X <= x_img(end)) & ...
-      and(Z >= z_img(1), Z <= z_img(end));
-
-t = nexttile;
-    [~,hB,hColor] = imOverlayInterp(bmodeFull, colorImg, range_bmode, range_img, ...
-                        transparency, x_img, z_img, roi, xFull, zFull);   
-    hold on;
-    contour(xFull, zFull, roi, 1,'w--', 'LineWidth', 2)
-    hold off;
-    xlabel('Lateral [mm]'), ylabel('Depth [mm]');
-    hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
-    title(label_methods{iMet})
-    set(gca,'fontsize',fontSize)
-
-end
-%%
-
-
-
-
