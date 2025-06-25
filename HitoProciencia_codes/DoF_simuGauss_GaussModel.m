@@ -41,7 +41,7 @@ bsc_gt_by_rpm   = true;  % calculate GT by Reference Phantom Method
 
 % Directory outcomes (can be changed)
 if saveOutcomes % (FIGURES & METRICS)
-    dirOutcomes = './out/PROCIENCIA_Hito/simuGauss/';
+    dirOutcomes = './out/PROCIENCIA_Hito/simuGauss/gaussModel';
     if (~exist(dirOutcomes)); mkdir (dirOutcomes); end
 end
 
