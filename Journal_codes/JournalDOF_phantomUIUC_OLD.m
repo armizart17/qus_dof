@@ -55,7 +55,7 @@ else % PC EMZ
 end
 
 %% LOAD DATA
-folderDataSam = 'homov1'; numPhantomSam = '1'; 
+folderDataSam = 'homov1'; numPhantomSam = '3'; 
 folderDataRef = 'homov1'; numPhantomRef = '2';
 
 % folderDataSam = 'homoverasonics'; numPhantomSam = '1'; 
