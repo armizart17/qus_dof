@@ -85,7 +85,7 @@ function spectralData = calc_powerSpectra_vSimple(data, pars)
     ind_z = z_ini <= z & z <= z_end;
     x = x(ind_x);
     z = z(ind_z);
-    rfdata_sam_roi = rfdata_sam(ind_z,ind_x);
+    rfdata_sam_roi = rfdata_sam(ind_z,ind_x,:);
     
     % Lateral samples
     % wx = round(blocksize(1)*(1-overlap)/dx);  % Between windows OLD

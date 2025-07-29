@@ -1,16 +1,18 @@
 
-%% Beamformed and saved data (requires function loadAndBfCurve_C52v_1Foc_PW, check below)
+
+%% Beamformed and saved data (requires function loadAndBfCurve_C52v_1Foc_PW)
 % By EMZ based on CS code
+
 
 %% BEAMFORMING
 
-% FATTY LIVER VERSION M04-D02
-inputDir    = 'Q:\NonClinicalAvendanoData\Jul10_Focused_PlaneWave_Liver_Phantoms\SavedDataCurvilinearPW\';
+% FATTY LIVER VERSION M007-D10
+inputDir    = 'Q:\NonClinicalAvendanoData\Jul10_Focused_PlaneWave_Liver_Phantoms\SavedDataCurvilinearPW';
 outputDir0  = 'D:\emirandaz\qus\data\liver'; % change if needed
 
 folderOut   = 'bf_SavedDataCurvilinearPW'; %ACQ date Month Day
 
-outputDir = fullfile(outputDir0, folderOut);
+outputDir   = fullfile(outputDir0, folderOut);
 
 if ~exist(outputDir) mkdir(outputDir); end
 
@@ -37,18 +39,20 @@ for i_matFiles = 1:length(matFiles)
             
             if ~exist(presetName,'file'), continue; end
         
-            [rf,bMode,xp,zp,z0p,xr,zr,r0,fs] = loadAndBfCurve_C52v(fileName, presetName);
-            
-            figure('Units','normalized','Position',[0.1 0.1 0.7 0.6]);
+            % [rf,bMode,xp,zp,z0p,xr,zr,r0,fs] = loadAndBfCurve_C52v(fileName, presetName);
 
-            caption = strrep(samName(1:end-4), '_', ' ');
+            [MONOFOC, PW] = loadAndBfCurve_C52v_1Foc_PW(fileName, presetName);
+            
+            figure('Units','normalized','Position',[0.1 0.1 0.75 0.65]);
+
+            caption = strrep(samName(1:end-4), '_', '-');
             fontSize = 12;
             
-            t = tiledlayout(1, 2, 'TileSpacing', 'Compact', 'Padding', 'Compact');
+            t = tiledlayout(2, 2, 'TileSpacing', 'Compact', 'Padding', 'Compact');
             
-            % First plot (left side)
+            % 1st plot (upper left side)
             nexttile
-            imagesc(xr, zr*1e3, bMode);
+            imagesc(MONOFOC.xr, MONOFOC.zr*1e3, MONOFOC.bMode);
             cbar = colorbar;
             ylabel(cbar, '[dB]', 'FontSize', 12);
             clim([-55 0]);    
@@ -57,11 +61,11 @@ for i_matFiles = 1:length(matFiles)
             xlabel('\theta [°]', 'FontSize', 14);
             axis image 
             % axis tight
-            title(caption, 'FontSize', fontSize);
+            title(['Monofoc ', caption], 'FontSize', fontSize);
             
-            % Second plot (right side)
+            % 2nd plot (upper right side)
             nexttile
-            pcolor(xp*1e3, zp*1e3, bMode);
+            pcolor(MONOFOC.xp*1e3, MONOFOC.zp*1e3, MONOFOC.bMode);
             shading interp
             cbar = colorbar;
             ylabel(cbar, '[dB]', 'FontSize', 12);
@@ -70,7 +74,35 @@ for i_matFiles = 1:length(matFiles)
             ylabel('Depth [mm]', 'FontSize', 14);
             xlabel('Lateral [mm]', 'FontSize', 14);
             axis equal ij tight
-            title(caption, 'FontSize', fontSize);
+            title(['Monofoc ', caption], 'FontSize', fontSize);
+            set(gca, 'Color', 'k');  % axes background
+
+
+            % 3rd plot (lower left side)
+            nexttile
+            imagesc(PW.xr, PW.zr*1e3, PW.bMode);
+            cbar = colorbar;
+            ylabel(cbar, '[dB]', 'FontSize', 12);
+            clim([-55 0]);    
+            colormap gray;
+            ylabel('Depth [mm]', 'FontSize', 14);
+            xlabel('\theta [°]', 'FontSize', 14);
+            axis image 
+            % axis tight
+            title(['PW ', caption], 'FontSize', fontSize);
+            
+            % 4th plot (lower right side)
+            nexttile
+            pcolor(PW.xp*1e3, PW.zp*1e3, PW.bMode);
+            shading interp
+            cbar = colorbar;
+            ylabel(cbar, '[dB]', 'FontSize', 12);
+            clim([-55 0]);
+            colormap gray               
+            ylabel('Depth [mm]', 'FontSize', 14);
+            xlabel('Lateral [mm]', 'FontSize', 14);
+            axis equal ij tight
+            title(['PW ', caption], 'FontSize', fontSize);
             set(gca, 'Color', 'k');  % axes background
 
             % Save Figure
@@ -79,7 +111,7 @@ for i_matFiles = 1:length(matFiles)
             
             % Save bf data
             save(fullfile(outputDir,samName(1:end-4)+".mat"), ...
-                'rf','bMode','xp','zp','z0p','xr','zr','r0','fs');
+                'MONOFOC', 'PW');
  
         end
     end

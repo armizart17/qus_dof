@@ -5,18 +5,17 @@
 % Post-processing all cases dispersion boxcharts, violins, etc.
 % ====================================================================== %
 %%
-% init
+init
 warning('off'); %% Important to turn warns in loop off
 %% DIRECTORIES
 
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci';
+baseDir     = 'D:\emirandaz\qus\data\liver\patients_Trifocal'; 
 
-% resultsDir  = fullfile(baseDir,'results_RPL'); 
-% resultsDir  = fullfile(baseDir,'results_LS'); 
+% resultsDir  = fullfile(baseDir,'results_RPL'); % results by RPL method no regu
+% resultsDir  = fullfile(baseDir,'results_LS'); % results by RPL method no regu
+% resultsDir  = fullfile(baseDir,'results_RPL_lu'); % results by RPL method no regu
+resultsDir  = fullfile(baseDir,'results_LS_lu'); % results by RPL method no regu
 
-resultsDir  = fullfile(baseDir,'resultsPatient_RPL_lu'); 
-
-metric_name = 'mean';  % Change this to 'mean', 'std', 'median' or 'iqr' as needed
 
 % Result files (Processed by DoF method)
 resultFiles = dir(fullfile(resultsDir,'*.mat'));
@@ -123,6 +122,8 @@ end
 
 %% BOX PLOTS
 % =============== Box alpha ===============
+
+metric_name = 'median';  % Change this to 'mean', 'std', 'median' or 'iqr' as needed
 
 methods_unique = unique(Ta.method, 'stable');  % Keep original order
 num_methods = length(methods_unique);

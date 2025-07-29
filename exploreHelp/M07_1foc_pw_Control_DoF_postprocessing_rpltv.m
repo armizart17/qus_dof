@@ -1,6 +1,6 @@
 % ====================================================================== %
 % Post processing of Liver Healthy volunteers 
-% BF Data (Acq in 2025 in Avendano BARUATRIC), reference Wisconsin
+% BF Data (Acq in 2025 in Avendano CONTROL JULY 10), reference Wisconsin
 % Processed by DoF method
 % Post-processing all cases dispersion boxcharts, violins, etc.
 % ====================================================================== %
@@ -9,14 +9,11 @@
 warning('off'); %% Important to turn warns in loop off
 %% DIRECTORIES
 
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci';
+baseDir     = 'D:\emirandaz\qus\data\liver\bf_SavedDataCurvilinearPW\';
 
-% resultsDir  = fullfile(baseDir,'results_RPL'); 
-% resultsDir  = fullfile(baseDir,'results_LS'); 
+resultsDir  = fullfile(baseDir,'resultsControl_RPL_lu'); 
 
-resultsDir  = fullfile(baseDir,'resultsPatient_RPL_lu'); 
-
-metric_name = 'mean';  % Change this to 'mean', 'std', 'median' or 'iqr' as needed
+metric_name = 'std';  % Change this to 'mean', 'std', 'median' or 'iqr' as needed
 
 % Result files (Processed by DoF method)
 resultFiles = dir(fullfile(resultsDir,'*.mat'));
