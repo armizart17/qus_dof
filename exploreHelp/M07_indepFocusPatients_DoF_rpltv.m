@@ -23,11 +23,15 @@ sos_ref     = 1539; % [m/s]
 
 n_wisconsin = 3.8;
 n_fat_lu    = 1.3;
-delta_n_lu  = n_fat_lu - n_wisconsin;
+delta_n_lu  = n_fat_lu - n_wisconsin; % delta_n = -2.5
 
 b_wisonsin  = -55; % dB
 b_fat_lu    = -28; % dB
-delta_b_lu  = b_fat_lu - b_wisonsin;
+delta_b_lu  = b_fat_lu - b_wisonsin; %delta_b = 27dB fat
+
+% SUMARY (Lu et al)
+% Healhty   : delta_n = -2.4, delta_b = 15dB
+% Fat       : delta_n = -2.5, delta_b = 27dB
 %%
 
 mean2d  = @(x) mean(x(:));
@@ -46,14 +50,17 @@ refsDir     = fullfile(baseDir,'Beamformed_Reference_WisconsinPhant_IndepFoci');
 
 % Outcomes directory
 reguRPL     = true; % RPL
-% reguRPL     = true; % LS
+% reguRPL     = false; % LS
 
 if reguRPL
-    resultsOut  = 'resultsPatient_RPL_lu_filt1';
-    figuresOut  = 'figuresPatient_RPL_lu_filt1';
+    % resultsOut  = 'RPL_lu_patient_out';
+    % figuresOut  = 'RPL_lu_patient_fig';
+    % RPL LOW
+    resultsOut  = 'RPL_mu50_lu_patient_out';
+    figuresOut  = 'RPL_mu50_lu_patient_fig';
 else
-    resultsOut  = 'resultsPatient_LS_lu_filt1';
-    figuresOut  = 'figuresPatient_LS_lu_filt1';
+    resultsOut  = 'LS_lu_Patientfilt1_res';
+    figuresOut  = 'LS_lu_Patientfilt1_fig';
 end
 
 polFolder = 'polarFig';
@@ -118,7 +125,8 @@ par_rpl.df_op      = 0;
 par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION 
 
 if reguRPL 
-mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
+% mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
+mu_rpl_tv          = [10^0; 10^0; 50]; % RPL
 else
 mu_rpl_tv          = [0.001; 0.001; 0.001]; % LS
 end

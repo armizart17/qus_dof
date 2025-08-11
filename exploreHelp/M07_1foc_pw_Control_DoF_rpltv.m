@@ -23,16 +23,21 @@ alpha_ref   = 0.52; % [dB/cm/MHz]
 sos_ref     = 1539; % [m/s]
 
 n_wisconsin = 3.8;
-n_fat_lu    = 1.3;
-delta_n_lu  = n_fat_lu - n_wisconsin;
+n_healthy_lu = 1.4;
+delta_n_lu  = n_healthy_lu - n_wisconsin; % delta_n_healthy = -2.4
 
-b_wisonsin  = -55; % [dB]
-b_fat_lu    = -28; % [dB]
-delta_b_lu  = b_fat_lu - b_wisonsin;
+b_wisonsin      = -55; % [dB]
+b_healthy_lu    = -40; % [dB]
+delta_b_lu  = b_healthy_lu - b_wisonsin; % delta_b_healthy = 27dB
+
+% SUMARY (Lu et al)
+% Healhty   : delta_n = -2.4, delta_b = 15dB
+% Fat       : delta_n = -2.5, delta_b = 27dB
 %%
-
-caseData = 'AS';
-%caseData = 'rest';
+% 
+% caseData = 'AS';
+% caseData = 'rest';
+caseData = 'EMZ';
 
 mean2d  = @(x) mean(x(:));
 std2d   = @(x) std(x(:));
@@ -49,15 +54,27 @@ refsDir     = fullfile(baseDir,caseData,'ref');
 
 % Outcomes directory
 reguRPL     = true; % RPL
-% reguRPL     = true; % LS
+% reguRPL     = false; % LS
+
+% % AS
+% if reguRPL
+%     resultsOut  = 'resultsControl_RPL_lu';
+%     figuresOut  = 'figuresControl_RPL_lu';
+% else
+%     resultsOut  = 'resultsControl_LS_lu';
+%     figuresOut  = 'figuresControl_LS_lu';
+% end
 
 % AS
 if reguRPL
-    resultsOut  = 'resultsControl_RPL_lu';
-    figuresOut  = 'figuresControl_RPL_lu';
+    % resultsOut  = 'RPL_lu_control_out';
+    % figuresOut  = 'RPL_lu_control_fig';
+    % RPL LOW
+    resultsOut  = 'RPL_mu50_lu_control_out';
+    figuresOut  = 'RPL_mu50_lu_control_fig';
 else
-    resultsOut  = 'resultsControl_LS_lu';
-    figuresOut  = 'figuresControl_LS_lu';
+    resultsOut  = 'LS_lu_control_out';
+    figuresOut  = 'LS_lu_control_fig';
 end
 
 polFolder = 'polarFig';
@@ -105,7 +122,8 @@ sampleFiles = dir(fullfile(sampleDir,'*.mat'));
 %% SPECTRAL METHOD PARAMETERS
 
 pars.P           = 512; % NFFT for 10wl is 256, 20wl 512
-pars.bw          = [1.5 3.5]; % [MHz]
+% pars.bw          = [1.5 3.5]; % [MHz]
+pars.bw          = [1.35 3.65]; % [MHz]
 pars.overlap     = 0.8;
 pars.blocksize   = 10; % wavelengths
 pars.blocklines  = 8;
@@ -123,7 +141,8 @@ par_rpl.df_op      = 0;
 par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION 
 
 if reguRPL 
-mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
+% mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
+mu_rpl_tv          = [10^0; 10^0; 50]; % RPL
 else
 mu_rpl_tv          = [0.001; 0.001; 0.001]; % LS
 end
@@ -133,7 +152,12 @@ for iFile = 1:length(sampleFiles)
 %% Loading file and variables
 % samName = "000345400_IHR_F1";
 samName = sampleFiles(iFile).name(1:end-4);
+if ~strcmp(caseData, 'EMZ')
 SAM     = load(fullfile(sampleDir,samName+".mat")).MONOFOC; % MONOFOC
+else
+SAM     = load(fullfile(sampleDir,samName+".mat")); % MONOFOC
+end
+
 % fprintf("Loading sample: %s \n", samName)
 fprintf("Loading sample %d / %d: %s \n", iFile, length(sampleFiles), samName)
 
@@ -182,6 +206,8 @@ j_sam       = 1.0;
 % REFERENCE WISCONSIN
 j_ref       = 1.0;
 
+
+if ~strcmp(caseData, 'EMZ')
 refFiles    = dir([refsDir,'\*.mat']);
 % refFiles = refFiles(x,:); % for select specific "x" refFiles
 numRefs     = length(refFiles); 
@@ -189,6 +215,18 @@ REF         = load( fullfile(refsDir, refFiles(1).name) ).MONOFOC;
 newrf       = nan([size(REF.rf), numRefs], 'like', REF.rf); % Use 'like' for type consistency
 for i = 1:numRefs
     newrf(:,:,i) = load( fullfile(refsDir,refFiles(i).name) ).MONOFOC.rf(:,:,1); % Directly extract rf, avoiding redundant variables
+end
+
+else
+refFiles    = dir([refsDir,'\*.mat']);
+% refFiles = refFiles(x,:); % for select specific "x" refFiles
+numRefs     = length(refFiles); 
+REF         = load( fullfile(refsDir, refFiles(1).name) );
+newrf       = nan([size(REF.rf), numRefs], 'like', REF.rf); % Use 'like' for type consistency
+for i = 1:numRefs
+    newrf(:,:,i) = load( fullfile(refsDir,refFiles(i).name) ).rf(:,:,1); % Directly extract rf, avoiding redundant variables
+end
+
 end
 
 REF.rf  = newrf;
@@ -535,7 +573,7 @@ for i = 1:length(indices_alpha)
     set(gca, 'fontsize', fontSize);
 end
 colormap(t1,'gray')
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_a_rect.png"), ...
+exportgraphics(gcf,fullfile(figsDir,"a_rect_"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%%%% b %%%%%%%%%%%%%%%%%%%%%%%%
@@ -583,7 +621,7 @@ for i = 1:length(indices_b)
     set(gca, 'fontsize', fontSize);
 end
 colormap(t1,'gray')
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_b_rect.png"), ...
+exportgraphics(gcf,fullfile(figsDir,"b_rec"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%% n %%%%%%%%%%%%%%%%%%%%%%%%
@@ -631,7 +669,7 @@ for i = 1:length(indices_n)
     set(gca, 'fontsize', fontSize);
 end
 colormap(t1,'gray')
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_n_rect.png"), ...
+exportgraphics(gcf,fullfile(figsDir,"n_rec"+samName+".png"), ...
     'Resolution','300')
 end
 
@@ -699,7 +737,7 @@ for i = 1:length(indices_alpha)
     % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
     set(gca, 'fontsize', fontSize);
-    exportgraphics(gcf,fullfile(figsPolDir,"sam_"+samName+"_a_pol"+num2str(idx)+".png"), ...
+    exportgraphics(gcf,fullfile(figsPolDir,"a_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
 end
 
@@ -730,7 +768,7 @@ for i = 1:length(indices_b)
     % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
     set(gca, 'fontsize', fontSize);
-     exportgraphics(gcf,fullfile(figsPolDir,"sam_"+samName+"_b_pol"+num2str(idx)+".png"), ...
+     exportgraphics(gcf,fullfile(figsPolDir,"b_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
 end
 
@@ -760,7 +798,7 @@ for i = 1:length(indices_b)
     % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
     set(gca, 'fontsize', fontSize);
-    exportgraphics(gcf,fullfile(figsPolDir,"sam_"+samName+"_n_pol"+num2str(idx)+".png"), ...
+    exportgraphics(gcf,fullfile(figsPolDir,"n_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
 end
 

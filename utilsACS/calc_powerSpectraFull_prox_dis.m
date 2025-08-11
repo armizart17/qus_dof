@@ -90,6 +90,12 @@ function spectralData = calc_powerSpectraFull_prox_dis(data, pars)
     wx = round(blocksize_wv*lambda*(1-overlap)/dx);  % Between windows  
     nx = round(blocksize_wv*lambda/ dx);
 
+    % Lateral samples (CURVE)
+    if isfield(pars, 'blocklines')
+        wx = round(pars.blocklines*(1-overlap));  % Between windows
+        nx = pars.blocklines;                 % Window size
+    end
+
     x0 = 1:wx:length(x)-nx;
     x_ACS = x(1,x0+round(nx/2));
     n  = length(x0);

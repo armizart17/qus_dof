@@ -15,11 +15,30 @@
 %     "Range", "A2:B21","Sheet",2);
 %%
 init
-%%
 
+%% WISCONSIN SPECS
+
+% n_wisconsin = 3.76;
+% b_wisonsin  = -54.81; % [dB]
+alpha_ref   = 0.52; % [dB/cm/MHz]
+sos_ref     = 1539; % [m/s]
+
+n_wisconsin = 3.8;
+n_fat_lu    = 1.3;
+delta_n_lu  = n_fat_lu - n_wisconsin; % delta_n = -2.5
+
+b_wisonsin  = -55; % dB
+b_fat_lu    = -28; % dB
+delta_b_lu  = b_fat_lu - b_wisonsin; %delta_b = 27dB fat
+
+% SUMARY (Lu et al)
+% Healhty   : delta_n = -2.4, delta_b = 15dB
+% Fat       : delta_n = -2.5, delta_b = 27dB
+%%
 mean2d  = @(x) mean(x(:));
 std2d   = @(x) std(x(:));
 cv2d    = @(x) 100*std(x(:))/mean(x(:));
+calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:))};
 
 % General directory
 baseDir     = 'D:\emirandaz\qus\data\liver\patients_Trifocal'; 
@@ -33,40 +52,43 @@ reguRPL     = true; % RPL
 % reguRPL     = false; % LS
 
 if reguRPL
-    resultsOut  = 'results_RPL';
-    figuresOut  = 'figures_RPL';
+    resultsOut  = 'RPL_lu_control_out';
+    figuresOut  = 'RPL_lu_control_fig';
 else
-    resultsOut  = 'results_LS';
-    figuresOut  = 'figures_LS';
+    resultsOut  = 'LS_lu_control_out';
+    figuresOut  = 'LS_lu_control_out';
 end
+
+polFolder = 'polarFig';
 
 resultsDir  = fullfile(baseDir,resultsOut);
 figsDir     = fullfile(baseDir,figuresOut);
+figsPolDir  = fullfile(baseDir,figuresOut, polFolder);
+
 if ~exist(resultsDir) mkdir(resultsDir); end
 if ~exist(figsDir) mkdir(figsDir); end
+if ~exist(figsPolDir) mkdir(figsPolDir); end
 
-
-range_bmode     = [-60 0];
-range_depth     = [0 19];
-range_acs       = [0.1 1.7];
-transparency    = 0.65;
-Np2dB           = 20*log10(exp(1));
-dB2Np           = 1/Np2dB;
-calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:))};
-plotBmode       = false;
-plotBSCdB       = true;  % plot \Delta b in dB
-fontSize        = 14;
-Np2dB           = 20*log10(exp(1));
-dB2Np           = 1/Np2dB;
-calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:))};
-plotBmode       = false;
-plotBSCdB       = true;  % plot \Delta b in dB
-fontSize        = 14;
-
-% ROI MANUAL (save first)
+% ROI MANUAL 
 roi_already     = true;
 roisDir         = fullfile(baseDir,'roisControl');
 if ~exist(roisDir) mkdir(roisDir); end
+
+range_bmode     = [-60 0];
+range_depth     = [0 19];
+range_acs       = [0 1.2];
+range_delta_b   = [15 35];
+range_delta_n   = [-5 0];
+transparency    = 0.65;
+Np2dB           = 20*log10(exp(1));
+dB2Np           = 1/Np2dB;
+fontSize        = 14;
+
+plotBmode       = false;
+plotBSCdB       = true;  % plot \Delta b in dB
+plotSpectrum    = false;
+plotPolar       = false;
+plotRect        = true;
 
 % Read sample files
 sampleFiles = dir(fullfile(sampleDir,'*.mat'));
@@ -100,6 +122,7 @@ par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION
 
 if reguRPL 
 mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
+% mu_rpl_tv          = [10^0; 10^0; 7.5]; % RPL
 else
 mu_rpl_tv          = [0.001; 0.001; 0.001]; % LS
 end
@@ -109,12 +132,16 @@ for iFile = 1:length(sampleFiles)
 %% Loading file and variables
 % samName = "000345400_IHR_F1";
 samName = sampleFiles(iFile).name(1:end-4);
+
+if ~strcmp(samName, '73089254_LHI_F')
+    continue
+    
+end
 SAM     = load(fullfile(sampleDir,samName+".mat"));
-% fprintf("Loading sample: %s \n", samName)
 fprintf("Loading sample %d / %d: %s \n", iFile, length(sampleFiles), samName)
 
 bmode_sam   = SAM.bMode;
-SAM.x       = SAM.xr; % are in º
+SAM.x       = SAM.xr; % original in in mm °, so °
 SAM.z       = SAM.zr;
 r0          = SAM.r0;
 
@@ -155,9 +182,7 @@ pars.z_roi     = [rect(2), rect(2)+rect(4)]*1E-2; % [m]
 % SAMPLE
 j_sam       = 1.0;
 
-% REFERENCE 544
-alpha_ref   = 0.52; % [dB/cm/MHz]
-sos_ref     = 1539; % [m/s]
+% REFERENCE WISCONSIN
 j_ref       = 1.0;
 
 refFiles    = dir([refsDir,'\*.mat']);
@@ -176,11 +201,10 @@ REF.c0  = sos_ref;
 % Just in case
 REF.x   = SAM.x;
 REF.z   = SAM.z;
+bmode_ref = my_RF2Bmode(REF.rf(:,:,1));
 
 %% BMODE CHECK
 
-caption  = samName; 
-bmode_ref = my_RF2Bmode(REF.rf(:,:,1));
 if (plotBmode)
 deadBand = 0.1e-2;
 figure,
@@ -223,24 +247,38 @@ S_sam = spectralData_sam.powerSpectra;
 spectralData_ref = calc_powerSpectra_vSimple(REF, pars); % @
 S_ref = spectralData_ref.powerSpectra;
 
+% Validate this first 
+if ~isequal(size(S_sam), size(S_ref))
+    % Display Fs values in MHz
+    Fs_sam_MHz = SAM.fs / 1e6;
+    Fs_ref_MHz = REF.fs / 1e6;
+    fprintf('SAM.fs = %.2f MHz, REF.fs = %.2f MHz\n', Fs_sam_MHz, Fs_ref_MHz);
+
+    warning('Incompatible sizes: S_sam [%s], S_ref [%s] — skipping.', ...
+             mat2str(size(S_sam)), mat2str(size(S_ref)));
+    continue;  % Skip to next iteration
+end
+
 SR_emz = S_sam ./ S_ref;
 SR = permute(SR_emz,[3,1,2]); clear SR_emz
 
 %% PLOT SPECTRUM BY DEPTH
 
-ratio_dB = -20;
-ratio = db2mag(ratio_dB);
+ratio_dB    = -20;
+ratio       = db2mag(ratio_dB);
 
-Sfull = spectralData_sam.Sfull; % POWER LAW 3DOF
+Sfull       = spectralData_sam.Sfull; % POWER LAW 3DOF
 
-[m, n, ~] = size(spectralData_sam.Sfull);
+[m,n,~]     = size(spectralData_sam.Sfull);
 
-nLines = 5;
-lin_cen = round(n / 2); 
-lat_range = max(1, lin_cen-fix(nLines/2)):min(n, lin_cen+fix(nLines/2)); 
+nLines      = 5;
+lin_cen     = round(n / 2); 
+lat_range   = max(1, lin_cen-fix(nLines/2)):min(n, lin_cen+fix(nLines/2)); 
 
-S_2d = squeeze(mean(spectralData_sam.Sfull(:, lat_range, :), 2)); % Mean over 2nd dim (lateral)
-S_2d_dB  = pow2db(S_2d ./ max(S_2d, [], 2));
+S_2d        = squeeze(mean(spectralData_sam.Sfull(:, lat_range, :), 2)); % Mean over 2nd dim (lateral)
+S_2d_dB     = pow2db(S_2d ./ max(S_2d, [], 2));
+
+if plotSpectrum
 
 figure;
 set(gcf,'units','normalized','outerposition',[0 0.1 0.5 0.5]); box on;
@@ -273,7 +311,7 @@ legend('Location', 'Best');
 
 exportgraphics(gcf,fullfile(figsDir,samName+"_powSp.png"), ...
    'Resolution','300')
-
+end
 %% DOF METHODS
 
 band    = spectralData_sam.band;
@@ -310,7 +348,6 @@ bsc_results_dof  = cell(1,length(methods));
 % delta_b_prior       = log(db2pow(cell2mat(bsc_results_all{iSam, iRef}(3))));
 % delta_n_prior       = cell2mat(bsc_results_all{iSam, iRef}(4));
 % end
-
 
 % Loop over methods
     for iMet = 1:length(methods)
@@ -350,8 +387,8 @@ bsc_results_dof  = cell(1,length(methods));
 
         elseif strcmp( estim_method, '2-DoF-b')
              
-            % delta_b_prior = log(db2pow( median(b_ratio_dB(:)) )); % prior from 3DoF
-            delta_b_prior = median(b_3dof(:)); % prior from 3DoF
+            % delta_b_prior = median(b_3dof(:)); % From 3DoF
+            delta_b_prior = log(db2pow(delta_b_lu)); % From Lu et al 1999
 
             comp_ref    = comp_ref_b_bsc(delta_b_prior);
             SR_comp     = SR .* comp_ref .*comp_freq_a;
@@ -367,8 +404,8 @@ bsc_results_dof  = cell(1,length(methods));
 
         elseif strcmp( estim_method, '2-DoF-n')
 
-            % delta_n_prior = median(n_ratio(:));
-            delta_n_prior = median(n_3dof(:));
+            % delta_n_prior = median(n_3dof(:)); % From 3-DoF
+            delta_n_prior = delta_n_lu; % From Lu et al 1999
 
             comp_ref    = comp_ref_n_bsc(delta_n_prior, band, p, q);
             SR_comp     = SR .* comp_ref .* comp_freq_a;
@@ -433,8 +470,6 @@ bsc_results_dof  = cell(1,length(methods));
 
     end
 
-%% DISPLAY OVERLAY SIMPLE RECT
-
 methods      = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
 method_labels = { ...
     '\mathrm{3\textrm{-}DoF}', ...
@@ -443,7 +478,8 @@ method_labels = { ...
     '\mathrm{2\textrm{-}DoF}_{\mathrm{b,a}}' ...
 };
 
-acs_sam = alpha_ratio + alpha_ref;
+%% DISPLAY OVERLAY SIMPLE RECT
+if plotRect
 
 units           = 1E2;
 bmodeFull       = bmode_sam;
@@ -457,16 +493,32 @@ zFull           = SAM.z*units;
 [X,Z]   = meshgrid(xFull,zFull);
 roi     = X >= x_img(1) & X <= x_img(end) & Z >= z_img(1) & Z <= z_img(end);
 
-%%%%%%%%%%%%%%%%%%%%%%%% alpha %%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%% alpha %%%%%%%%%%%%%%%%%%%%%%%%
 indices_alpha = [1, 3, 4];  % Corresponden a 3-DoF, 2-DoF-b, 2-DoF-n
 
-figure;
-tiledlayout(1,3, 'TileSpacing', 'tight')
-set(gcf, 'Units', 'pixels', 'Position', [50, 100, 1600, 600]); % [x, y, width, height]
+figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
+tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+
+% Bmode
+t1 = nexttile();
+imagesc(xFull,zFull,bmodeFull,range_bmode); % axis image;
+title(caption)
+ylim(range_depth)
+hold on
+contour(xFull,zFull,roi,1,'w--')
+hold off
+xlabel('Lateral [°]')
+ylabel('Depth [cm]')
+hBm = colorbar('Ticks',-60:20:0);
+% hBm = colorbar;
+hBm.Label.String = 'dB';
+hBm.Location = 'westoutside';
+set(gca, 'fontsize', fontSize);
+
+% alpha maps
 for i = 1:length(indices_alpha)
     idx = indices_alpha(i);
     nexttile;
-
     [~,~,hColor] = imOverlayInterp(bmodeFull, maps_results_dof{idx}.alpha, range_bmode, range_acs, ...
                                    transparency, x_img, z_img, roi, xFull, zFull);
     axis normal;
@@ -474,8 +526,8 @@ for i = 1:length(indices_alpha)
     contour(xFull, zFull, roi, 2, 'w--')
     hold off;
     ylim(range_depth)
-
-    xlabel('Lateral [°]'), ylabel('Depth [cm]');
+    xlabel('Lateral [°]'), 
+    % ylabel('Depth [cm]');
    
     hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
     title(sprintf('$%s: \\alpha_s = %.2f \\pm %.2f, \\%%CV = %.2f$', ...
@@ -486,29 +538,45 @@ for i = 1:length(indices_alpha)
         'Interpreter', 'latex');
     set(gca, 'fontsize', fontSize);
 end
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_a_rect.png"), ...
+colormap(t1,'gray')
+exportgraphics(gcf,fullfile(figsDir,"a_rect_"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%%%% b %%%%%%%%%%%%%%%%%%%%%%%%
 indices_b = [1, 2, 4];  
 
-figure;
-tiledlayout(1,3, 'TileSpacing', 'tight')
-set(gcf, 'Units', 'pixels', 'Position', [50, 100, 1600, 600]); % [x, y, width, height]
+figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
+tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+
+% Bmode
+t1 = nexttile();
+imagesc(xFull,zFull,bmodeFull,range_bmode); % axis image;
+title(caption)
+ylim(range_depth)
+hold on
+contour(xFull,zFull,roi,1,'w--')
+hold off
+xlabel('Lateral [°]')
+ylabel('Depth [cm]')
+hBm = colorbar('Ticks',-60:20:0);
+% hBm = colorbar;
+hBm.Label.String = 'dB';
+hBm.Location = 'westoutside';
+set(gca, 'fontsize', fontSize);
+
+% Delta b maps
 for i = 1:length(indices_b)
     idx = indices_b(i);
     nexttile;
-
-    [~,~,hColor] = imOverlayInterp(bmodeFull, maps_results_dof{idx}.b_dB, range_bmode, [], ...
+    [~,~,hColor] = imOverlayInterp(bmodeFull, maps_results_dof{idx}.b_dB, range_bmode, range_delta_b, ...
                                    transparency, x_img, z_img, roi, xFull, zFull);
     axis normal;
     hold on;
     contour(xFull, zFull, roi, 2, 'w--')
     hold off;
     ylim(range_depth)
-
-    xlabel('Lateral [°]'), ylabel('Depth [cm]');
-   
+    xlabel('Lateral [°]'),
+    % ylabel('Depth [cm]');
     hColor.Label.String = 'dB';
     title(sprintf('$%s: \\Delta b = %.2f \\pm %.2f, \\%%CV = %.2f$', ...
         method_labels{idx}, ...
@@ -518,30 +586,45 @@ for i = 1:length(indices_b)
         'Interpreter', 'latex');
     set(gca, 'fontsize', fontSize);
 end
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_b_rect.png"), ...
+colormap(t1,'gray')
+exportgraphics(gcf,fullfile(figsDir,"b_rec"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%% n %%%%%%%%%%%%%%%%%%%%%%%%
-
 indices_n = [1, 2, 3];  
 
-figure;
-tiledlayout(1,3, 'TileSpacing', 'tight')
-set(gcf, 'Units', 'pixels', 'Position', [50, 100, 1600, 600]); % [x, y, width, height]
+figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
+tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+
+% Bmode
+t1 = nexttile();
+imagesc(xFull,zFull,bmodeFull,range_bmode); % axis image;
+title(caption)
+ylim(range_depth)
+hold on
+contour(xFull,zFull,roi,1,'w--')
+hold off
+xlabel('Lateral [°]')
+ylabel('Depth [cm]')
+hBm = colorbar('Ticks',-60:20:0);
+% hBm = colorbar;
+hBm.Label.String = 'dB';
+hBm.Location = 'westoutside';
+set(gca, 'fontsize', fontSize);
+
+%Delta n
 for i = 1:length(indices_n)
     idx = indices_n(i);
     nexttile;
-
-    [~,~,hColor] = imOverlayInterp(bmodeFull, maps_results_dof{idx}.n, range_bmode, [], ...
+    [~,~,hColor] = imOverlayInterp(bmodeFull, maps_results_dof{idx}.n, range_bmode, range_delta_n, ...
                                    transparency, x_img, z_img, roi, xFull, zFull);
     axis normal;
     hold on;
     contour(xFull, zFull, roi, 2, 'w--')
     hold off;
     ylim(range_depth)
-
-    xlabel('Lateral [°]'), ylabel('Depth [cm]');
-   
+    xlabel('Lateral [°]'),
+    % ylabel('Depth [cm]');  
     hColor.Label.String = 'a.u.';
     title(sprintf('$%s: \\Delta n = %.2f \\pm %.2f, \\%%CV = %.2f$', ...
         method_labels{idx}, ...
@@ -551,10 +634,13 @@ for i = 1:length(indices_n)
         'Interpreter', 'latex');
     set(gca, 'fontsize', fontSize);
 end
-exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_n_rect.png"), ...
+colormap(t1,'gray')
+exportgraphics(gcf,fullfile(figsDir,"n_rec"+samName+".png"), ...
     'Resolution','300')
+end
 
 %%  DISPLAY OVERLAY SIMPLE POLAR
+if plotPolar
 
 xPolar  = SAM.xp;
 zPolar  = SAM.zp + 0.0101; % Trans.radiusMm*1e-3*(1-cos(phi(1)))
@@ -572,25 +658,20 @@ zPolarACS               = zPolarACS + z0Polar;
 
 %%%%%%%%%%%%%%%%%%%%%%% BMODE %%%%%%%%%%%%%%%%%%%%%%%
 figure('Units', 'pixels', 'Position', [50, 100, 400, 300]); % [x, y, width, height]
-idx = indices_alpha(i);
-
 [ax1,~] = imOverlayPolar(bmodeFull,ones(size(maps_results_dof{1}.alpha)),range_bmode,range_acs,0, ...
     xPolar,zPolar,xPolarACS,zPolarACS);
 % yticks(ax1,[4 8 12 16])
 xlabel(ax1,'Lateral [cm]'), ylabel(ax1,'Axial [cm]')
-
 title(ax1, samName, 'Interpreter', 'none');
-
 xlim([-9 9])
 ylim(range_depth)
 hold on
 contour(xPolar*1e2, zPolar*1e2, roi,1,'w--')
 hold off
-
 set(gca, 'fontsize', fontSize);
-
-% exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_pol"+num2str(idx)+".png"), ...
+% exportgraphics(gcf,fullfile(figsPolDir,"sam_"+samName+"_pol"+num2str(idx)+".png"), ...
 % 'Resolution','300')
+
 %% QUS PARAMETERS
 
 %%%%%%%%%%%%%%%%%%%%%%%% alpha %%%%%%%%%%%%%%%%%%%%%%%%
@@ -619,13 +700,10 @@ for i = 1:length(indices_alpha)
     hold on
     contour(xPolar*1e2, zPolar*1e2, roi,1,'w--')
     hold off
-    % colorbar
-   
+    % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
-
     set(gca, 'fontsize', fontSize);
-    
-    exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_a_pol"+num2str(idx)+".png"), ...
+    exportgraphics(gcf,fullfile(figsPolDir,"a_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
 end
 
@@ -641,15 +719,13 @@ for i = 1:length(indices_b)
     [ax1,~] = imOverlayPolar(bmodeFull,maps_results_dof{idx}.b_dB,range_bmode,[ ],transparency, ...
         xPolar,zPolar,xPolarACS,zPolarACS);
     % yticks(ax1,[4 8 12 16])
-    xlabel(ax1,'Lateral [cm]'), ylabel(ax1,'Axial [cm]')
-    
+    xlabel(ax1,'Lateral [cm]'), ylabel(ax1,'Axial [cm]') 
     title(ax1, sprintf('$%s: \\Delta b = %.2f \\pm %.2f, \\%%CV = %.2f$', ...
         method_labels{idx}, ...
         mean(maps_results_dof{idx}.b_dB(:), 'omitnan'), ...
         std(maps_results_dof{idx}.b_dB(:), 'omitnan'), ...
         abs(cv2d(maps_results_dof{idx}.b_dB))), ...
         'Interpreter', 'latex');
-    
     xlim([-9 9])
     ylim(range_depth)
     hold on
@@ -657,10 +733,8 @@ for i = 1:length(indices_b)
     hold off
     % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
-
     set(gca, 'fontsize', fontSize);
-
-     exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_b_pol"+num2str(idx)+".png"), ...
+     exportgraphics(gcf,fullfile(figsPolDir,"b_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
 end
 
@@ -670,21 +744,18 @@ indices_b = [1, 2, 3];  % Corresponden a 3-DoF, 2-Dof-a, 2-DoF-b, 2-DoF-n
 for i = 1:length(indices_b)
     figure('Units', 'pixels', 'Position', [50, 100, 400, 300]); % [x, y, width, height]
     idx = indices_b(i);
-
     % [ax1,~] = imOverlayPolar(bmodeFull,ones(size(maps_results_dof{1}.alpha)),range_bmode,range_acs,0, ...
     %     xPolar,zPolar,xPolarACS,zPolarACS);
     [ax1,~] = imOverlayPolar(bmodeFull,maps_results_dof{idx}.n,range_bmode,[ ],transparency, ...
         xPolar,zPolar,xPolarACS,zPolarACS);
     % yticks(ax1,[4 8 12 16])
     xlabel(ax1,'Lateral [cm]'), ylabel(ax1,'Axial [cm]')
-
     title(ax1, sprintf('$%s: \\Delta n = %.2f \\pm %.2f, \\%%CV = %.2f$', ...
         method_labels{idx}, ...
         mean(maps_results_dof{idx}.n(:), 'omitnan'), ...
         std(maps_results_dof{idx}.n(:), 'omitnan'), ...
         abs(cv2d(maps_results_dof{idx}.n))), ...
         'Interpreter', 'latex');
-
     xlim([-9 9])
     ylim(range_depth)
     hold on
@@ -692,11 +763,11 @@ for i = 1:length(indices_b)
     hold off
     % colorbar 
     % hColor.Label.String = 'dB\cdotcm^{-1}\cdotMHz^{-1}';
-
     set(gca, 'fontsize', fontSize);
-
-    exportgraphics(gcf,fullfile(figsDir,"sam_"+samName+"_n_pol"+num2str(idx)+".png"), ...
+    exportgraphics(gcf,fullfile(figsPolDir,"n_pol"+samName+"_"+num2str(idx)+".png"), ...
     'Resolution','300')
+end
+
 end
 
 end
@@ -713,8 +784,13 @@ else
 end
 
 close all
-pause (0.5);
+pause (0.25);
 end
+
+tt = toc;
+fprintf('All datate Proc. Time (min): %.2f\n', tt/60)
+
+
 %% Auxiliary functions
 % Get delays
 function [t_delay] = getRXDelays(Trans, t, n_elements, n_pulses, sound_speed, wvl)

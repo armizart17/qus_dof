@@ -22,6 +22,8 @@ resultFiles = dir(fullfile(resultsDir,'*.mat'));
 nFiles      = length(resultFiles);
 %% METHOD LABELS
 
+%% METHOD LABELS
+
 methods      = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
 method_labels = { ...
     '\mathrm{3\textrm{-}DoF}', ...
@@ -32,8 +34,8 @@ method_labels = { ...
 
 nMethods = length(methods);
 
-varNames = {'num',  'method','mean',  'std',   'median','iqr',   'patient','sample'};
-varTypes = {'int16','string','double','double','double','double','int16',  'int16'};
+varNames = {'idName','num',  'method','mean',  'std',   'median','iqr'};
+varTypes = {'string','int16','string','double','double','double','double'};
 T       = table('Size',[nFiles*(nMethods-1), length(varNames)], ...
             'VariableTypes',varTypes,'VariableNames',varNames);
 
@@ -50,23 +52,23 @@ indices_alpha = [1, 3, 4];  % 3-DoF, 2-Dof-a, 2-DoF-b, 2-DoF-n
 row = 1;
 for ii = 0:nFiles-1
     fileName    = resultFiles(ii+1).name;
-    patient     = str2double(fileName(1:3));
-    sample      = str2double(fileName(5:6));
+    idName      = fileName(1:end-4);
     load(fullfile(resultsDir,fileName));
     
     for jj = 1:nMethods-1 % always 3 methods 
         iMethod = indices_alpha(jj);
         img_map = maps_results_dof{iMethod}.alpha;
 
-        Ta(row,:) = {row, methods{iMethod}, ...
+        Ta(row,:) = {idName, row, methods{iMethod}, ...
                     mean(img_map(:), 'omitnan'), ...
                     std(img_map(:), 'omitnan'), ...
                     median(img_map(:), 'omitnan'), ...
                     iqr(img_map(:)), ...
-                    patient, sample};
+                    };
         row = row + 1;
     end
 end
+%
 % writetable(Ta,fullfile(resultsDir,'meanACS.xlsx'))
 
 % ================== Delta b metrics ==================
@@ -76,20 +78,19 @@ indices_b = [1, 2, 4];  % 3-DoF, 2-Dof-a, 2-DoF-b, 2-DoF-n
 row = 1;
 for ii = 0:nFiles-1
     fileName    = resultFiles(ii+1).name;
-    patient     = str2double(fileName(1:3));
-    sample      = str2double(fileName(5:6));
+    idName      = fileName(1:end-4);
     load(fullfile(resultsDir,fileName));
     
     for jj = 1:nMethods-1 % always 3 methods 
         iMethod = indices_b(jj);
         img_map = maps_results_dof{iMethod}.b_dB;
 
-        Tb(row,:) = {row, methods{iMethod}, ...
+        Tb(row,:) = {idName, row, methods{iMethod}, ...
                     mean(img_map(:), 'omitnan'), ...
                     std(img_map(:), 'omitnan'), ...
                     median(img_map(:), 'omitnan'), ...
                     iqr(img_map(:)), ...
-                    patient, sample};
+                    };
         row = row + 1;
     end
 end
@@ -101,24 +102,23 @@ indices_n = [1, 2, 3];  % 3-DoF, 2-Dof-a, 2-DoF-b, 2-DoF-n
 row = 1;
 for ii = 0:nFiles-1
     fileName    = resultFiles(ii+1).name;
-    patient     = str2double(fileName(1:3));
-    sample      = str2double(fileName(5:6));
+    idName      = fileName(1:end-4);
+    load(fullfile(resultsDir,fileName));
     load(fullfile(resultsDir,fileName));
     
     for jj = 1:nMethods-1 % always 3 methods 
         iMethod = indices_n(jj);
         img_map = maps_results_dof{iMethod}.n;
 
-        Tn(row,:) = {row, methods{iMethod}, ...
+        Tn(row,:) = {idName, row, methods{iMethod}, ...
                     mean(img_map(:), 'omitnan'), ...
                     std(img_map(:), 'omitnan'), ...
                     median(img_map(:), 'omitnan'), ...
                     iqr(img_map(:)), ...
-                    patient, sample};
+                    };
         row = row + 1;
     end
 end
-
 
 %% BOX PLOTS
 % =============== Box alpha ===============

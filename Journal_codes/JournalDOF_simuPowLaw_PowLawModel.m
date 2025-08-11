@@ -24,7 +24,7 @@ range_bmode     = [-80 0];
 % Options
 saveOutcomes    = false; % save data
 
-methodsRegu     = true;  % regularization activater RPL
+methodsRegu     = false;  % regularization activater RPL
 plotBmode       = false; % plot bmode sample and reference ROI
 plotBmodeOverl  = false;  % plot bmode overlay with colorimage
 plotBSCdB       = true;  % plot \Delta b in dB
@@ -878,7 +878,10 @@ xlabel('Frequency [MHz]', 'FontSize', font_size);
 ylabel('\DeltaBSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
 ylim(ylim_range);
 %xlim(xlim_range);
-title('\DeltaBSC', 'FontSize', font_size + 2);
+% title('\DeltaBSC', 'FontSize', font_size + 2);
+if methodsRegu title('RPL-TV', 'FontSize', font_size + 2);
+else title('LS', 'FontSize', font_size + 2);
+end
 legend('Location', 'best', 'FontSize', font_size-7);
 set(gca, 'FontSize', font_size);
 hold off;
