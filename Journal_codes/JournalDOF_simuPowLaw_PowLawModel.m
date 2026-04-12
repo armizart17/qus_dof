@@ -46,7 +46,8 @@ end
 % folderDataSam   = 'powLawSimu';
 % folderDataRef   = 'powLawSimu';
 
-dirData         = 'D:\emirandaz\qus\data\NonuniformBSC2D_2025';
+% dirData         = 'D:\emirandaz\qus\data\NonuniformBSC2D_2025';
+dirData         = 'C:\Users\armiz\OneDrive\Documentos\MATLAB\dataLIM'; % XPS AMZ
 folderDataSam   = 'dx_18p75um';
 folderDataRef   = 'dx_18p75um';
 
@@ -841,7 +842,7 @@ end
 xlim_range = pars.bw + 0.05*[-1 1]; % X-axis limits
 ylim_range = [0.05 1]; % Y-axis limits
 line_width = 3.5; % Set line width
-font_size  = 30; % Adjust font size, change to 32
+font_size  = 32; % Adjust font size, change to 32
 
 % GoF
 bsc_results{1, 1} = sprintf('3-DoF     (GoF_{dB} = %.2f) \n', MetricsBSC(1).diff_dB);

@@ -42,7 +42,9 @@ calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:)
 
 
 % General directory
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci'; 
+% baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci'; 
+baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\patients_IdepFoci_1';
+
 
 % Sample and Reference directories
 sampleDir   = fullfile(baseDir,'Beamformed_ClinicalData_Patients_IndepFoci_filt1');
@@ -50,8 +52,8 @@ refsDir     = fullfile(baseDir,'Beamformed_Reference_WisconsinPhant_IndepFoci');
 
 % Outcomes directory
 
-resultsOut  = 'RSLD_indepFoc_out';
-figuresOut  = 'RSLD_indepFoc_fig';
+resultsOut  = 'Reg1_SLD_indepFoc_out';
+figuresOut  = 'Reg1_SLD_indepFoc_fig';
 
 polFolder   = 'polarFig';
 
@@ -84,7 +86,9 @@ plotRect        = true;
 % Read sample files
 sampleFiles = dir(fullfile(sampleDir,'*.mat'));
 
+
 % Specific sample
+sampleFiles = dir(fullfile(sampleDir,'46747475_IOLAI_F1.mat'));
 % acqDir = dir(fullfile(sampleDir,'016-03.mat')); %65*ma
 % acqDir = dir(fullfile(sampleDir,'007-05.mat')); %*ma
 % acqDir = dir(fullfile(sampleDir,'014-01.mat')); %*ma

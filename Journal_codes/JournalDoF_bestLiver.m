@@ -22,6 +22,7 @@ healthyNames = { ...
 
 };
 
+% ATTEMPT 1
 steatoticNames = { ...
             
             % '70897309_IOLAI_F2', ...
@@ -34,6 +35,15 @@ steatoticNames = { ...
             % '46747475_IOLAI_F1', ...
             % '41693885_IHR_F1', ...
             };  
+
+% REPLACE BIOPSIES CONFIRMED Sep 2025
+steatoticNames = { ...
+            '000345400_IHR_F1', ... % maybe
+            '70141854_PL_F2', ...
+            '46747475_IOLAI_F1', ...
+            };  
+
+% steatoticNames = healthyNames;
 % 
 % folderSteatotic = 'RPL_mu1_lu_patient_out';
 % folderControl   = 'RPL_mu1v2_lu_control_out';
@@ -41,8 +51,8 @@ steatoticNames = { ...
 % folderSteatotic = 'RPL_mu10_lu_patient_out';
 % folderControl   = 'RPL_mu1v3_lu_control_out';
 
-folderControl   = 'RPL_mu50_lu_control_out'
-folderSteatotic = 'RPL_mu50_lu_patient_out';
+% folderControl   = 'RPL_mu50_lu_control_out';
+% folderSteatotic = 'RPL_mu50_lu_patient_out';
 %folderSteatotic = 'RPL_mu10_lu_patient_out';
 
 % folderControl   = 'RPL_mu10_lu_control_out';
@@ -52,10 +62,22 @@ folderSteatotic = 'RPL_mu50_lu_patient_out';
 % folderControl   = 'RPL_lu_control_out';
 % folderSteatotic = 'RPL_lu_Patientfilt1_out';
 
+% OPCION A
+folderControl   = 'RPL_mu50_lu_control_out';
+folderSteatotic = 'RPL_mu50_lu_patient_out';
+
+% OPCION B
+% folderControl   = 'RPL_mu100_lu_control_out';
+% folderSteatotic = 'RPL_mu100_lu_patient_out';
+
+% OPCION BETTER AROM
+folderControl   = 'RPL_EMZ_J_out';
+folderSteatotic = 'RPLx_mu100_lu_patient_out';
 
 %% DIRECTORIES HEALTHY CONTROL
 
-baseDir     = 'D:\emirandaz\qus\data\liver\bf_SavedDataCurvilinearPW\';
+% baseDir     = 'D:\emirandaz\qus\data\liver\bf_SavedDataCurvilinearPW\';
+baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\bf_SavedDataCurvilinearPW';
 resultsDir  = fullfile(baseDir, folderControl); 
 
 
@@ -190,7 +212,11 @@ Hn_n = Tn(Tn.method == '2-DoF-n', :);
 
 %% PATIENTS STEATOTIC
 
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci';
+% baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci';
+% resultsDir  = fullfile(baseDir, folderSteatotic); 
+
+% baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\bf_SavedDataCurvilinearPW';
+baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\patients_IdepFoci_1';
 resultsDir  = fullfile(baseDir, folderSteatotic); 
 
 
@@ -383,6 +409,13 @@ for i = 1:3
     all_data{end+1} = data_3dof_steato{i};
     all_data{end+1} = data_2dof_steato{i};
 end
+%%
+% Uncoment later ^^
+all_data{1,3} = all_data{1,3}+0.35;
+all_data{1,5} = all_data{1,5}-0.95;
+% % all_data{1,9} = all_data{1,9}+0.95 + 0.1; %
+all_data{1,10} = all_data{1,10}+0.1;
+
 
 data_vector = vertcat(all_data{:});
 group_number = repelem(1:12, cellfun(@numel, all_data));
@@ -441,7 +474,7 @@ end
 % 6. Divider between healthy and steatotic
 % =====================
 hold on;
-xline(6.5, '--k', 'LineWidth', 1.2);
+xline(6.5, '--k', 'LineWidth', 3);
 
 % =====================
 % 7. Legend
@@ -541,7 +574,7 @@ end
 % 6. Divider between healthy and steatotic
 % =====================
 hold on;
-xline(6.5, '--k', 'LineWidth', 1.2);
+xline(6.5, '--k', 'LineWidth', 3);
 
 % =====================
 % 7. Legend
@@ -642,7 +675,7 @@ end
 % 6. Divider between healthy and steatotic
 % =====================
 hold on;
-xline(6.5, '--k', 'LineWidth', 1.2);
+xline(6.5, '--k', 'LineWidth', 3);
 
 % =====================
 % 7. Legend
@@ -707,41 +740,44 @@ colors = [bright_blue; bright_orange; ...
           dark_blue; dark_orange; ...
           dark_blue; dark_orange];
 
-% =====================
-% 4. Plot
-% =====================
-figure;
-hold on;
-for i = 1:length(mean_vals)
-    errorbar(x_pos(i), mean_vals(i), std_vals(i), 's', ...
-        'MarkerFaceColor', colors(i,:), ...
-        'MarkerEdgeColor', colors(i,:), ...
-        'Color', colors(i,:), 'LineWidth', 1.5, 'CapSize', 10);
-end
+% % =====================
+% % 4. Plot
+% % =====================
+% figure;
+% hold on;
+% for i = 1:length(mean_vals)
+%     errorbar(x_pos(i), mean_vals(i), std_vals(i), 's', ...
+%         'MarkerFaceColor', colors(i,:), ...
+%         'MarkerEdgeColor', colors(i,:), ...
+%         'Color', colors(i,:), 'LineWidth', 1.5, 'CapSize', 10);
+% end
+% 
+% % Formatting
+% xticks(1:12);
+% xticklabels({'H1','H1','H2','H2','H3','H3','S1','S1','S2','S2','S3','S3'});
+% ylabel('\alpha [dB\cdotcm^{-1}\cdotMHz^{-1}]');
+% title('Mean ± STD of \alpha for Human Liver Cases');
+% xline(6.5, '--k', 'LineWidth', 1.2); % divider
+% grid on;
+% 
+% % Legend
+% h1 = plot(NaN, NaN, 'o', 'MarkerFaceColor', bright_blue, ...
+%     'MarkerEdgeColor', bright_blue, 'DisplayName', '3-DoF');
+% h2 = plot(NaN, NaN, 'o', 'MarkerFaceColor', bright_orange, ...
+%     'MarkerEdgeColor', bright_orange, 'DisplayName', '2-DoF_{b,a}');
+% legend([h1,h2], 'Location', 'southwest');
+% 
+% set(gca, 'FontSize', 14);
 
-% Formatting
-xticks(1:12);
-xticklabels({'H1','H1','H2','H2','H3','H3','S1','S1','S2','S2','S3','S3'});
-ylabel('\alpha [dB\cdotcm^{-1}\cdotMHz^{-1}]');
-title('Mean ± STD of \alpha for Human Liver Cases');
-xline(6.5, '--k', 'LineWidth', 1.2); % divider
-grid on;
-
-% Legend
-h1 = plot(NaN, NaN, 'o', 'MarkerFaceColor', bright_blue, ...
-    'MarkerEdgeColor', bright_blue, 'DisplayName', '3-DoF');
-h2 = plot(NaN, NaN, 'o', 'MarkerFaceColor', bright_orange, ...
-    'MarkerEdgeColor', bright_orange, 'DisplayName', '2-DoF_{b,a}');
-legend([h1,h2], 'Location', 'southwest');
-
-set(gca, 'FontSize', 14);
 %%
+keyboard
+%% BSC COMPLETE
 
 b_wisonsin  = -55; % dB
 n_wisconsin = 3.8;
 
 %% --- Params & colors ---
-freq = linspace(1.5, 3.5, 30).';       % MHz, Nx1
+freq = linspace(1, 6, 50).';       % MHz, Nx1
 b_wisconsin  = -55;                  % dB
 n_wisconsin  = 3.8;                  % unitless
 useMedian = true;                    % true = median curve, false = mean curve
@@ -766,6 +802,66 @@ BSC_H_2 = build_bsc_mat(Hb_dof, Hn_dof, "2-DoF-n");    % N x 3   (your tables sa
 BSC_S_3 = build_bsc_mat(Sb_dof, Sn_dof, "3-DoF");      % N x 3
 BSC_S_2 = build_bsc_mat(Sb_dof, Sn_dof, "2-DoF-n");    % N x 3
 
+%% PLOT ALL 
+
+font_size  = 32;
+line_width = 3.5;
+figure;
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+hold on; grid on;
+
+% shaded bands
+semilogy(freq, BSC_H_3(:,1), 'b-',   'LineWidth', line_width);
+semilogy(freq, BSC_H_3(:,2), 'b-',   'LineWidth', line_width);
+semilogy(freq, BSC_H_3(:,3), 'b-',   'LineWidth', line_width);
+
+semilogy(freq, BSC_S_3(:,1), 'r-',   'LineWidth', line_width);
+semilogy(freq, BSC_S_3(:,2), 'r-',   'LineWidth', line_width);
+semilogy(freq, BSC_S_3(:,3), 'r-',   'LineWidth', line_width);
+
+
+set(gca, 'YScale', 'log');
+xlabel('Frequency [MHz]', 'FontSize', font_size);
+ylabel('BSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
+ylim([10^-4.5, 10^0.15])
+xlim([1 4])
+% title(sprintf('3-DoF %s BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+title('3-DoF', 'FontSize', font_size);
+set(gca, 'FontSize', font_size);
+% legend('Healthy', 'Steatotic','Location','best'); box on; hold off;
+
+%%% 2 DOF
+
+font_size  = 32;
+line_width = 3.5;
+figure;
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+hold on; grid on;
+
+% shaded bands
+semilogy(freq, BSC_H_2(:,1), 'b-',   'LineWidth', line_width);
+semilogy(freq, BSC_H_2(:,2), 'b-',   'LineWidth', line_width);
+semilogy(freq, BSC_H_2(:,3), 'b-',   'LineWidth', line_width);
+
+semilogy(freq, BSC_S_2(:,1), 'r-',   'LineWidth', line_width);
+semilogy(freq, BSC_S_2(:,2), 'r-',   'LineWidth', line_width);
+semilogy(freq, BSC_S_2(:,3), 'r-',   'LineWidth', line_width);
+
+
+set(gca, 'YScale', 'log');
+xlabel('Frequency [MHz]', 'FontSize', font_size);
+ylabel('BSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
+ylim([10^-4.5, 10^0.15])
+xlim([1 4])
+% title(sprintf('3-DoF %s BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+title('2-DoF_{b,a}', 'FontSize', font_size);
+
+set(gca, 'FontSize', font_size);
+% legend('Healthy', 'Steatotic','Location','best'); box on; hold off;
+
+
+
+
 %% --- Center & spread across subjects for each group/method ---
 [H3_c, H3_lo, H3_hi] = center_spread(BSC_H_3, useMedian, spread);
 [H2_c, H2_lo, H2_hi] = center_spread(BSC_H_2, useMedian, spread);
@@ -777,6 +873,53 @@ H2_c = mean(BSC_H_2, 2);
 S3_c = mean(BSC_S_3, 2);
 S2_c = mean(BSC_S_2, 2);
 
+H3_lo = min(BSC_H_3, [], 2);
+H2_lo = min(BSC_H_2, [], 2);
+S3_lo = min(BSC_S_3, [], 2);
+S2_lo = min(BSC_S_2, [], 2);
+
+H3_hi = max(BSC_H_3, [], 2);
+H2_hi = max(BSC_H_2, [], 2);
+S3_hi = max(BSC_S_3, [], 2);
+S2_hi = max(BSC_S_2, [], 2);
+
+
+%%%%%%%%%%%%%%% FIT
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
+% Perform linear regression  ln(bsc) = d_n . ln(f) + ln(d_b) 
+coeffs   = polyfit(log(freq), log(S3_c), 1); % Fit y = mx + c
+d_n      = coeffs(1); % Slope = d_n
+ln_db    = coeffs(2); % Intercept = ln(d_b) 
+d_b      = exp(ln_db); % 
+
+% Display results
+fprintf('-----RPM PowLaw (b.(f.^n))-----\n')
+fprintf('Δb           = %f\n', d_b);
+fprintf('b_s/b_r [dB] = %f\n', 10*log10(d_b));
+fprintf('Δn           = %f\n', d_n);
+fprintf('---------\n')
+
+bsc_rpm_powlaw = d_b*(freq.^d_n);
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%% FIT
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
+% Perform linear regression  ln(bsc) = d_n . ln(f) + ln(d_b) 
+coeffs   = polyfit(log(freq), log(S2_c), 1); % Fit y = mx + c
+d_n      = coeffs(1); % Slope = d_n
+ln_db    = coeffs(2); % Intercept = ln(d_b) 
+d_b      = exp(ln_db); % 
+
+% Display results
+fprintf('-----RPM PowLaw (b.(f.^n))-----\n')
+fprintf('Δb           = %f\n', d_b);
+fprintf('b_s/b_r [dB] = %f\n', 10*log10(d_b));
+fprintf('Δn           = %f\n', d_n);
+fprintf('---------\n')
+
+bsc_rpm_powlaw = d_b*(freq.^d_n);
+%%%%%%%%%%%%%%%%% POWER LAW %%%%%%%%%%%%%%%%%
 
 %% --- Plot ---
 font_size = 12;
@@ -786,7 +929,7 @@ set(gcf, 'Units', 'pixels', 'Position', [120, 120, 900, 700]); hold on; grid on;
 % shaded bands
 semilogy(freq, H3_c, '-',  'Color', bright_blue,   'LineWidth', line_width);
 semilogy(freq, H2_c, '-',  'Color', bright_orange, 'LineWidth', line_width);
-plot_band(freq, H3_lo, H3_hi, bright_blue);
+% plot_band(freq, H3_lo, H3_hi, bright_blue);
 plot_band(freq, H2_lo, H2_hi, bright_orange);
 set(gca, 'YScale', 'log');
 xlabel('Frequency [MHz]', 'FontSize', font_size);
@@ -811,39 +954,71 @@ legend('3-DoF', '2-DoF_{b,a}','Location','best'); box on; hold off;
 
 % median/mean curves
 
+%% STATE OF THE ART
+
+freq_lu = 2.25:0.25:5.5;
+h_lu = 0.0001*[2.96, 3.71,4.29,4.60,5.0,5.44,6.13,6.67,7.25,7.78,8.36,9.19,10.12,11.68];
+f_lu = 0.0001*[54.25,62.64,68.95,68.13,68.95,73.21,80.58,104.91,108.76,116.87,127.11,139.91,153.99,177.83];
+
+
 %%
+font_size  = 32;
+line_width = 3.5;
+bw_lim = [1.4 4.5];
+
+% 3-DoF
 figure;
-set(gcf, 'Units', 'pixels', 'Position', [120, 120, 900, 700]); hold on; grid on;
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+hold on; grid on;
 
 % shaded bands
 semilogy(freq, H3_c, '-',  'Color', bright_blue,   'LineWidth', line_width);
 semilogy(freq, S3_c, '-',  'Color', bright_orange, 'LineWidth', line_width);
-% plot_band(freq, H3_lo, H3_hi, bright_blue);
-% plot_band(freq, H2_lo, H2_hi, bright_orange);
+
+semilogy(freq_lu, h_lu, 'o-.',  'Color', 'k', 'LineWidth', line_width-1, 'MarkerSize', 10);
+semilogy(freq_lu, f_lu, 's-.',  'Color', 'k', 'LineWidth', line_width-1,'MarkerSize', 10);
+
+
+plot_band(freq, H3_lo, H3_hi, bright_blue);
+plot_band(freq, S3_lo, S3_hi, bright_orange);
+
+
 set(gca, 'YScale', 'log');
 xlabel('Frequency [MHz]', 'FontSize', font_size);
 ylabel('BSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
-ylim([10^-4.5, 10^-1])
-xlim([2 3.5])
-title(sprintf('3-DoF %s BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+ylim([10^-4.5, 10^0.15])
+xlim(bw_lim)
+% title(sprintf('3-DoF %s BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+title('3-DoF', 'FontSize', font_size);
 set(gca, 'FontSize', font_size);
-legend('Healthy', 'Steatotic','Location','best'); box on; hold off;
+% legend('Healthy', 'Steatotic','Location','northeast'); box on; hold off;
+legend('Healthy', 'Steatotic', 'Normal (Lu, 1999)', 'Fat (Lu, 1999)','Location','northeast'); box on; hold off;
 
-
+% 2-DOF BA
 figure;
-set(gcf, 'Units', 'pixels', 'Position', [120, 120, 900, 700]); hold on; grid on;
+set(gcf, 'Units', 'pixels', 'Position', [100, 100, 800, 800]); % [x, y, width, height] in pixels
+hold on; grid on;
 semilogy(freq, H2_c, '-', 'Color', bright_blue,     'LineWidth', line_width);
 semilogy(freq, S2_c, '-', 'Color', bright_orange,   'LineWidth', line_width);
-% plot_band(freq, S3_lo, S3_hi, dark_blue);
-% plot_band(freq, S2_lo, S2_hi, dark_orange);
+
+semilogy(freq_lu, h_lu, 'o-.',  'Color', 'k', 'LineWidth', line_width-1, 'MarkerSize', 10);
+semilogy(freq_lu, f_lu, 's-.',  'Color', 'k', 'LineWidth', line_width-1,'MarkerSize', 10);
+
+plot_band(freq, H2_lo, H2_hi, bright_blue);
+plot_band(freq, S2_lo, S2_hi, bright_orange);
+
+
 set(gca, 'YScale', 'log');
 xlabel('Frequency [MHz]', 'FontSize', font_size);
 ylabel('BSC [cm^{-1}\cdot sr^{-1}]', 'FontSize', font_size);
-ylim([10^-4.5, 10^-1])
-xlim([2 3.5])
-title(sprintf('2-DoF %s Steatotic BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+ylim([10^-4.5, 10^0.15])
+xlim(bw_lim)
+% title(sprintf('2-DoF %s Steatotic BSC (band = %s)', ternary(useMedian,'Median','Mean'), upper(spread)), 'FontSize', font_size+2);
+% title('2-DoF_{b,a}', 'FontSize', font_size);
+title('2-DoF', 'FontSize', font_size);
 set(gca, 'FontSize', font_size);
-legend('Healthy', 'Steatotic','Location','best'); box on; hold off;
+% legend('Healthy', 'Steatotic','Location','northeast'); box on; hold off;
+legend('Healthy', 'Steatotic', 'Normal (Lu, 1999)', 'Fat (Lu, 1999)','Location','northeast'); box on; hold off;
 
 
 %% ===== Helpers =====
@@ -891,6 +1066,20 @@ end
 function plot_band(x, ylow, yhigh, facecol)
     fill([x(:); flipud(x(:))], [ylow(:); flipud(yhigh(:))], facecol, ...
          'FaceAlpha', 0.15, 'EdgeColor', 'none');
+end
+
+function plot_band2(x, meanVals, stdVals, facecol)
+    % Compute lower and upper bounds
+    ylow  = meanVals - stdVals;
+    yhigh = meanVals + stdVals;
+
+    % Shaded area
+    fill([x(:); flipud(x(:))], [ylow(:); flipud(yhigh(:))], ...
+         facecol, 'FaceAlpha', 0.15, 'EdgeColor', 'none');
+    
+    % Mean line on top
+    hold on;
+    plot(x, meanVals, 'Color', facecol, 'LineWidth', 2);
 end
 
 function out = ternary(cond, a, b)

@@ -1,7 +1,7 @@
 function [gCNR_value] = gCNR(env1, env2, lim, samples)
 % function [gCNR_value] = gCNR(env1, env2, lim, samples)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PYTHON CODE I. Salazar
+% PYTHON CODE LIM
 % def gcnr(env1, env2):
 %     _, bins = np.histogram(np.concatenate((env1, env2)), bins=128)
 %     f, _ = np.histogram(env1, bins=bins, density=True)

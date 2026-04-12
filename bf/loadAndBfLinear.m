@@ -123,3 +123,11 @@ function rf_data = getBModeLinear(rf_channel, rx_samples, dyn_aperture, n_sample
         rf_data(:, n) = sum(rf_channel(:, :, n), 2);
     end
 end
+
+%%
+
+
+
+%%
+
+

@@ -40,7 +40,20 @@ cv2d    = @(x) 100*std(x(:))/mean(x(:));
 calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:))};
 
 % General directory
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci'; 
+baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\patients_IdepFoci_1\';
+
+steatoticNames = { ...
+            
+            % '70897309_IOLAI_F2', ...
+            % '80296823_IOLAI_F1', ...
+            % '80296823_IOLAI_F2', ...
+            % '000345400_IOLAI_F1', ... % double check
+            '000345400_IHR_F1', ... % maybe
+            '70141854_PL_F2', ...
+            '46747475_IOLAI_F1', ...
+            % '41693885_IHR_F1', ...
+            % '41681509_IHR_F1', ...
+            };  
 
 % Sample and Reference directories
 % sampleDir   = fullfile(baseDir,'Beamformed_ClinicalData_Patients_IndepFoci');
@@ -56,8 +69,8 @@ if reguRPL
     % resultsOut  = 'RPL_lu_patient_out';
     % figuresOut  = 'RPL_lu_patient_fig';
     % RPL LOW
-    resultsOut  = 'RPL_mu100_lu_patient_out';
-    figuresOut  = 'RPL_mu100_lu_patient_fig';
+    resultsOut  = 'RPLx_mu250_lu_patient_out';
+    figuresOut  = 'RPLx_mu250_lu_patient_fig';
 else
     resultsOut  = 'LS_lu_Patientfilt1_res';
     figuresOut  = 'LS_lu_Patientfilt1_fig';
@@ -126,7 +139,7 @@ par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION
 
 if reguRPL 
 % mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
-mu_rpl_tv          = [10^0; 10^0; 50]; % RPL
+mu_rpl_tv          = [10^0; 10^0; 250]; % RPL
 else
 mu_rpl_tv          = [0.001; 0.001; 0.001]; % LS
 end
@@ -136,6 +149,12 @@ for iFile = 1:length(sampleFiles)
 %% Loading file and variables
 % samName = "000345400_IHR_F1";
 samName = sampleFiles(iFile).name(1:end-4);
+
+    % Only continue if this file is in healthyNames
+    if ~ismember(samName, steatoticNames)
+        continue
+    end
+
 SAM     = load(fullfile(sampleDir,samName+".mat"));
 fprintf("Loading sample %d / %d: %s \n", iFile, length(sampleFiles), samName)
 

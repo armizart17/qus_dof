@@ -12,7 +12,8 @@
 
 %%
 tic
-init
+% clc
+% init
 warning('off')
 %% WISCONSIN SPECS
 
@@ -32,6 +33,13 @@ delta_b_lu  = b_fat_lu - b_wisonsin; %delta_b = 27dB fat
 % SUMARY (Lu et al)
 % Healhty   : delta_n = -2.4, delta_b = 15dB
 % Fat       : delta_n = -2.5, delta_b = 27dB
+
+% ^^ new
+blockSizeAxi = 14; blockLineLat = 10;
+% blockSizeAxi = 14; blockLineLat = 12;
+% blockSizeAxi = 10; blockLineLat = 8; % ORIGINAL 2025
+% blockSizeAxi = 8; blockLineLat = 8; % ORIGINAL 2025
+myMuReg     = 25;
 %%
 
 mean2d  = @(x) mean(x(:));
@@ -40,7 +48,35 @@ cv2d    = @(x) 100*std(x(:))/mean(x(:));
 calc2dStats     = {@(x) mean(x(:)), @(x) std(x(:)), @(x) 100*std(x(:))/mean(x(:))};
 
 % General directory
-baseDir     = 'D:\emirandaz\qus\data\liver\patients_IdepFoci'; 
+baseDir     = 'C:\Users\armiz\OneDrive\Documentos\RESEARCH\LIM\data\liver\patients_IdepFoci_1\';
+
+steatoticNames = { ...
+            
+            % '70897309_IOLAI_F2', ...
+            % '80296823_IOLAI_F1', ...
+            % '80296823_IOLAI_F2', ...
+            % '000345400_IOLAI_F1', ... % double check
+            '000345400_IHR_F1', ... % S1
+            '70141854_PL_F2', ... %S3
+            '46747475_IOLAI_F1', ... %S2
+            % '41693885_IHR_F1', ...
+            % '41681509_IHR_F1', ...
+            };  
+
+% Special case 70141854_PL_F2
+% steatoticNames = { ...
+%             '70141854_PL_F2', ... %S3
+%             }; 
+
+% Special case 46747475_IOLAI_F1
+steatoticNames = { ...
+            '46747475_IOLAI_F1', ... %S2
+            }; 
+
+% % Special case 000345400_IHR_F1
+% steatoticNames = { ...
+%             '000345400_IHR_F1', ... %S1
+%             }; 
 
 % Sample and Reference directories
 % sampleDir   = fullfile(baseDir,'Beamformed_ClinicalData_Patients_IndepFoci');
@@ -49,15 +85,17 @@ refsDir     = fullfile(baseDir,'Beamformed_Reference_WisconsinPhant_IndepFoci');
 
 
 % Outcomes directory
-reguRPL     = true; % RPL
+saveOutcomes = true; % save data
+reguRPL      = true; % RPL
 % reguRPL     = false; % LS
 
 if reguRPL
-    % resultsOut  = 'RPL_lu_patient_out';
-    % figuresOut  = 'RPL_lu_patient_fig';
     % RPL LOW
-    resultsOut  = 'RPL_mu100_lu_patient_out';
-    figuresOut  = 'RPL_mu100_lu_patient_fig';
+    % resultsOut  = 'RPLx_mu250_lu_patient_out';
+    % figuresOut  = 'RPLx_mu250_lu_patient_fig';
+    resultsOut  = sprintf('RPL_mu%d_ax%d_la%d_lu_patient_out', myMuReg, blockSizeAxi, blockLineLat);
+    figuresOut  = sprintf('RPL_mu%d_ax%d_la%d_lu_patient_fig', myMuReg, blockSizeAxi, blockLineLat);
+
 else
     resultsOut  = 'LS_lu_Patientfilt1_res';
     figuresOut  = 'LS_lu_Patientfilt1_fig';
@@ -75,7 +113,8 @@ if ~exist(figsPolDir) mkdir(figsPolDir); end
 
 % ROI MANUAL 
 roi_already     = true;
-roisDir         = fullfile(baseDir,'roisPatients_filt1');
+% roisDir         = fullfile(baseDir,'roisPatients_filt1');
+roisDir         = fullfile(baseDir,'roisPatients_filt2026');
 if ~exist(roisDir) mkdir(roisDir); end
 
 range_bmode     = [-60 0];
@@ -92,25 +131,29 @@ plotBmode       = false;
 plotBSCdB       = true;  % plot \Delta b in dB
 plotSpectrum    = false;
 plotPolar       = false;
-plotRect        = true;
+plotRect        = false;
 
 % Read sample files
 sampleFiles = dir(fullfile(sampleDir,'*.mat'));
 
 % Specific sample
+% sampleFiles = dir(fullfile(sampleDir,'70141854_PL_F2.mat'));
 % acqDir = dir(fullfile(sampleDir,'016-03.mat')); %65*ma
 % acqDir = dir(fullfile(sampleDir,'007-05.mat')); %*ma
 % acqDir = dir(fullfile(sampleDir,'014-01.mat')); %*ma
 % acqDir = dir(fullfile(sampleDir,'016-06.mat')); %emz
 % sampleFiles     = dir(fullfile(sampleDir,'020-05.mat')); %dv
 
+% Read sample files
+% sampleFiles = dir(fullfile(sampleDir,'000345400_IHR_F1.mat'));
 %% SPECTRAL METHOD PARAMETERS
 
 pars.P           = 512; % NFFT for 10wl is 256, 20wl 512
 pars.bw          = [1.5 3.5]; % [MHz]
+% pars.bw          = [1.35 3.65]; % [MHz]
 pars.overlap     = 0.8;
-pars.blocksize   = 10; % wavelengths
-pars.blocklines  = 8;
+pars.blocksize   = blockSizeAxi; % wavelengths
+pars.blocklines  = blockLineLat;
 pars.window_type = 3; %  (1) Hanning, (2) Tuckey, (3) Hamming, (4) Tchebychev
 pars.saran_layer = false;
 
@@ -126,7 +169,13 @@ par_rpl.ini_method = 1; % METHOD LEAST SQUARES INITIALIZATION
 
 if reguRPL 
 % mu_rpl_tv          = [1E3; 1E3; 10^4.2]; % RPL
-mu_rpl_tv          = [10^0; 10^0; 50]; % RPL
+% mu_rpl_tv          = [10^0; 10^0; 250]; % RPL
+% mu_rpl_tv          = [1; 1; 10]; % RPL b n a
+% mu_rpl_tv          = [10^0; 10^0; 10]; % RPL control
+mu_rpl_tv          = [10^0; 10^0; myMuReg]; % RPL control
+% mu_rpl_tv          = [10^0; 10^0; myMuReg]; % RPL 000345400_IHR_F1
+mu_rpl_tv          = [10^0; 10^0; 100]; % RPL 46747475_IOLAI_F1
+
 else
 mu_rpl_tv          = [0.001; 0.001; 0.001]; % LS
 end
@@ -136,6 +185,12 @@ for iFile = 1:length(sampleFiles)
 %% Loading file and variables
 % samName = "000345400_IHR_F1";
 samName = sampleFiles(iFile).name(1:end-4);
+
+    % Only continue if this file isdelta_b_prior in steatoticNames
+    if ~ismember(samName, steatoticNames)
+        continue
+    end
+
 SAM     = load(fullfile(sampleDir,samName+".mat"));
 fprintf("Loading sample %d / %d: %s \n", iFile, length(sampleFiles), samName)
 
@@ -170,12 +225,51 @@ if ~roi_already
     close,
 
 else
-% rois already saved execute full code
+% rois already saved executecd(fileparts(matlab.desktop.editor.getActiveFilename)) full code
 load(fullfile(roisDir,samName+".mat"),'rect');
     
 pars.x_roi     = [rect(1), rect(1)+rect(3)];      % [º]
 pars.z_roi     = [rect(2), rect(2)+rect(4)]*1E-2; % [m]
 
+% 70141854_PL_F2
+% pars.x_roi = [-1. 22.];
+% pars.z_roi = 1e-2*[4.11 9.25]; % 4.11 9.37
+
+% 46747475_IOLAI_F1 (TBD)
+pars.x_roi = [-21 0]; % [-24.3217 9.0610]
+pars.z_roi = 1e-2*[4.94 8.13]; % [4.94 8.13]
+
+% % 000345400_IHR_F1 case
+% pars.x_roi = [-20 20];
+% pars.z_roi = 1e-2*[4.45 7.96]; %4.5 7.96
+
+% pars.x_roi     = [rect(1), rect(1)+rect(3)];      % [º]
+% pars.z_roi     = [rect(2), rect(2)+rect(4)]*1E-2; % [m]
+
+% pars.x_roi     = [-16.2691   18.1022];
+% pars.x_roi     = [-18.2 18.2];
+% pars.z_roi     = [0.0424    0.0775];
+
+%% FORCE CHOOSING ROI
+    % figure('Units','centimeters', 'Position',[5 5 15 15]),
+    % imagesc(SAM.x, SAM.z*1E2,bmode_sam,range_bmode);
+    % colormap gray; clim(range_bmode);
+    % hb2=colorbar; ylabel(hb2,'dB')
+    % xlabel('\bfAngle [°]'); ylabel('\bfDepth [cm]');
+    % title(caption)
+    % 
+    % confirmation = '';
+    % while ~strcmp(confirmation,'Yes')
+    %     rect = getrect;
+    %     confirmation = questdlg('Sure?');
+    %     if strcmp(confirmation,'Cancel')
+    %         disp(rect)
+    %         break
+    %     end
+    % end
+    % close,
+    % pars.x_roi     = [rect(1), rect(1)+rect(3)];      % [º]
+    % pars.z_roi     = [rect(2), rect(2)+rect(4)]*1E-2; % [m]
 %% PACKAGE DATA FOR SPECTRAL FUNCTIONS
 
 % SAMPLE
@@ -338,7 +432,9 @@ z = 1E2*repmat(depth,1,q); % 1E2*spectralData_sam.depth * ones(1, q); % 2d array
 dz = reshape(Dy*z(:),p,q);
 dz(end,:) = dz(end-1,:);  
 
-methods          = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
+% methods          = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
+methods          = {'3-DoF', '2-DoF-n'};
+
 maps_results_dof = cell(1,length(methods));
 bsc_results_dof  = cell(1,length(methods));
 
@@ -431,7 +527,8 @@ bsc_results_dof  = cell(1,length(methods));
         [m_a, s_a, cv_a] = deal(calc2dStats{1}(acs_sam), calc2dStats{2}(acs_sam), calc2dStats{3}(acs_sam));
         [m_b, s_b, cv_b] = deal(calc2dStats{1}(b_ratio_dB), calc2dStats{2}(b_ratio_dB), calc2dStats{3}(b_ratio_dB));
         [m_n, s_n, cv_n] = deal(calc2dStats{1}(n_ratio), calc2dStats{2}(n_ratio), calc2dStats{3}(n_ratio));
-
+        
+        md_a = median(acs_sam(:)); md_b = median(b_ratio_dB(:)); md_n = median(n_ratio(:));
         % Save maps results
         % maps_results_dof{iMet} = {acs_sam, b_ratio_dB, n_ratio};
 
@@ -458,22 +555,27 @@ bsc_results_dof  = cell(1,length(methods));
         bsc_results_dof{iMet}.bsc_powlaw = bsc_est_powlaw;
 
         fprintf('-----%s---\n', estim_method);
-        fprintf('α_s        : %.4f ± %.4f, %%CV = %.4f\n', round(m_a, 3), round(s_a, 4), round(cv_a, 4));
+        fprintf('α_s        : %.4f ± %.4f (%.2f), %%CV = %.4f\n', round(m_a, 3), round(s_a, 4), md_a, round(cv_a, 4));
             if plotBSCdB 
-        fprintf('Δb [dB]    : %.4f ± %.4f, %%CV = %.4f\n', round(m_b, 3), round(s_b, 4), round(cv_b, 4));
+        fprintf('Δb [dB]    : %.4f ± %.4f (%.2f), %%CV = %.4f\n', round(m_b, 3), round(s_b, 4), md_b, round(cv_b, 4));
             else
         fprintf('Δb         : %.4f ± %.4f, %%CV = %.4f\n', round(m_b, 3), round(s_b, 4), round(cv_b, 4));
             end    
-        fprintf('Δn         : %.4f ± %.4f, %%CV = %.4f\n', round(m_n, 4), round(s_n, 4), round(cv_n, 4));
+        fprintf('Δn         : %.4f ± %.4f (%.2f), %%CV = %.4f\n', round(m_n, 4), round(s_n, 4), md_n, round(cv_n, 4));
         fprintf('--------\n');
 
     end
+% methods      = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
+% method_labels = { ...
+%     '\mathrm{3\textrm{-}DoF}', ...
+%     '\mathrm{2\textrm{-}DoF}_{\mathrm{b,n}}', ...
+%     '\mathrm{2\textrm{-}DoF}_{\mathrm{n,a}}', ...
+%     '\mathrm{2\textrm{-}DoF}_{\mathrm{b,a}}' ...
+% };
 
-methods      = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
+methods      = {'3-DoF', '2-DoF-n'};
 method_labels = { ...
     '\mathrm{3\textrm{-}DoF}', ...
-    '\mathrm{2\textrm{-}DoF}_{\mathrm{b,n}}', ...
-    '\mathrm{2\textrm{-}DoF}_{\mathrm{n,a}}', ...
     '\mathrm{2\textrm{-}DoF}_{\mathrm{b,a}}' ...
 };
 
@@ -493,10 +595,10 @@ zFull           = SAM.z*units;
 roi     = X >= x_img(1) & X <= x_img(end) & Z >= z_img(1) & Z <= z_img(end);
 
 % %%%%%%%%%%%%%%%%%%%%%%% alpha %%%%%%%%%%%%%%%%%%%%%%%%
-indices_alpha = [1, 3, 4];  % Corresponden a 3-DoF, 2-DoF-b, 2-DoF-n
-
+% indices_alpha = [1, 3, 4];  % Corresponden a 3-DoF, 2-DoF-b, 2-DoF-n
+indices_alpha = [1,2];
 figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
-tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+tiledlayout(1,1+length(methods), 'TileSpacing','compact', 'Padding','compact')
 
 % Bmode
 t1 = nexttile();
@@ -542,10 +644,11 @@ exportgraphics(gcf,fullfile(figsDir,"a_rect_"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%%%% b %%%%%%%%%%%%%%%%%%%%%%%%
-indices_b = [1, 2, 4];  
+% indices_b = [1, 2, 4];  
+indices_b = [1,2];
 
 figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
-tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+tiledlayout(1,1+length(methods), 'TileSpacing','compact', 'Padding','compact')
 
 % Bmode
 t1 = nexttile();
@@ -590,10 +693,11 @@ exportgraphics(gcf,fullfile(figsDir,"b_rec"+samName+".png"), ...
    'Resolution','300')
 
 % %%%%%%%%%%%%%%%%%%%%%% n %%%%%%%%%%%%%%%%%%%%%%%%
-indices_n = [1, 2, 3];  
+% indices_n = [1, 2, 3];  
+indices_n = [1,2];
 
 figure('Units','pixels', 'Position',[50, 100, 1800, 500]) % [x, y, width, height]
-tiledlayout(1,4, 'TileSpacing','compact', 'Padding','compact')
+tiledlayout(1,1+length(methods), 'TileSpacing','compact', 'Padding','compact')
 
 % Bmode
 t1 = nexttile();
@@ -770,7 +874,11 @@ end
 end
 
 end
+
+
+
 %% SAVING DATA
+if (saveOutcomes)
 if roi_already
     % Saving ACS maps and ROI
     save(fullfile(resultsDir,samName+".mat"), ...
@@ -784,6 +892,8 @@ end
 
 close all
 pause (0.25);
+
+end
 end
 
 tt = toc;

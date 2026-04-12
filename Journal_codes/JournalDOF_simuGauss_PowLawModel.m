@@ -49,7 +49,7 @@ dB2Np           = 1/Np2dB;
 range_bmode     = [-80 0];
 
 % Options
-saveOutcomes    = true;  % save data
+saveOutcomes    = false;  % save data
 
 methodsRegu     = true;  % regularization activater RPL
 plotBmode       = false; % plot bmode sample and reference ROI

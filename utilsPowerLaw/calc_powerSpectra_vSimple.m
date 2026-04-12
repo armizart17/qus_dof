@@ -137,13 +137,13 @@ function spectralData = calc_powerSpectra_vSimple(data, pars)
     pFull = length(bandFull);
     
        
-    fprintf('Power Spectra vSimple');
-    fprintf('\nBandwith: %.2f - %.2f MHz\n',freq_L*1e-6,freq_H*1e-6)
-    fprintf('Blocksize in wavelengths: %i\n',blocksize_wv)
-    fprintf('Blocksize x: %.2f mm, z: %.2f mm\n',nx*dx*1e3,nz*dz*1e3)
-    fprintf('Blocksize in pixels nx: %i, nz: %i\n',nx,nz);
-    fprintf('Region of interest columns: %i, rows: %i\n\n',m,n);
-    
+    % fprintf('Power Spectra vSimple');
+    % fprintf('\nBandwith: %.2f - %.2f MHz\n',freq_L*1e-6,freq_H*1e-6)
+    % fprintf('Blocksize in wavelengths: %i\n',blocksize_wv)
+    % fprintf('Blocksize x: %.2f mm, z: %.2f mm\n',nx*dx*1e3,nz*dz*1e3)
+    % fprintf('Blocksize in pixels nx: %i, nz: %i\n',nx,nz);
+    % fprintf('Region of interest columns: %i, rows: %i\n\n',m,n);
+    % 
     %%
     % Saran Layer compensation 
     t_saran = 1;
@@ -158,6 +158,7 @@ function spectralData = calc_powerSpectra_vSimple(data, pars)
 
     windowing = window_choice(nz, window_type); %@ nz/2 before
     windowing = windowing*ones(1, nx);
+    windowing = 1;
     
     nSamples = size(rfdata_sam_roi,3);
     S_ref = zeros(m,n,p,nSamples);
