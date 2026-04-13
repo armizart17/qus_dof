@@ -24,12 +24,23 @@ list_mu_g = [1000] ;
 list_mu_s = 10^3;
 
 % Output directory
-dirOut = './out/dofJournal/simuGauss/gaussModel/';
+if ispc
+    % Windows (local)
+    dirOut = './out/dofJournal/simuGauss/gaussModel';
+elseif isunix
+    % Linux cluster
+    dirOut = '/mnt/nfs2/emiranda/proj/dof26/out/simuGauss/gaussModel';  % explicit
+else
+    error('Unknown operating system');
+end
+
+
 if ~exist(dirOut, 'dir')
     mkdir(dirOut);
 end
 
-dirCases = fullfile(dirOut, 'gridSearch_cases');
+timestamp = datestr(datetime('now'), 'yyyy-mm-dd_HH-MM');
+dirCases = fullfile(dirOut, ['gridSearch_cases_' timestamp]);
 if ~exist(dirCases, 'dir')
     mkdir(dirCases);
 end

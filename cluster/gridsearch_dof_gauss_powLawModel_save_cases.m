@@ -25,12 +25,24 @@ list_mu_a = 10.^4;
 list_mu_b = [1000];
 list_mu_n = 10.^3;
 
-dirOut = './out/dofJournal/simuGauss/powLawModel/';
+% Output directory
+if ispc
+    % Windows (local)
+    dirOut = './out/dofJournal/simuGauss/powLawModel';
+elseif isunix
+    % Linux cluster
+    dirOut = '/mnt/nfs2/emiranda/proj/dof26/out/simuGauss/powLawModel';  % explicit
+else
+    error('Unknown operating system');
+end
+
+
 if ~exist(dirOut, 'dir')
     mkdir(dirOut);
 end
 
-dirCases = fullfile(dirOut, 'gridSearch_cases');
+timestamp = datestr(datetime('now'), 'yyyy-mm-dd_HH-MM');
+dirCases = fullfile(dirOut, ['gridSearch_cases_' timestamp]);
 if ~exist(dirCases, 'dir')
     mkdir(dirCases);
 end

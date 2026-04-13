@@ -32,12 +32,23 @@ list_mu_n = 10^3;
 
 
 % Output directory
-dirOut = './out/dofJournal/simuPowLaw/';
+if ispc
+    % Windows (local)
+    dirOut = './out/dofJournal/simuPowLaw/';
+elseif isunix
+    % Linux cluster
+    dirOut = '/mnt/nfs2/emiranda/proj/dof26/out/simuPowLaw';  % explicit
+else
+    error('Unknown operating system');
+end
+
+
 if ~exist(dirOut, 'dir')
     mkdir(dirOut);
 end
 
-dirCases = fullfile(dirOut, 'gridSearch_cases');
+timestamp = datestr(datetime('now'), 'yyyy-mm-dd_HH-MM');
+dirCases = fullfile(dirOut, ['gridSearch_cases_' timestamp]);
 if ~exist(dirCases, 'dir')
     mkdir(dirCases);
 end
