@@ -2,6 +2,7 @@
 #SBATCH --job-name=dof_grid_powLaw
 #SBATCH --output="./slurmout/slurm-%j.out"
 #SBATCH --partition=debug
+#SBATCH --nodelist=worker7
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
