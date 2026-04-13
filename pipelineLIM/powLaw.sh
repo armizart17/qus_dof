@@ -8,11 +8,11 @@
 ##SBATCH --cpus-per-task=10
 ##SBATCH --mem=0
 
-#SBATCH --partition=debug
+#SBATCH --partition=thinkstation
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
-#SBATCH --nodelist=worker4
+#SBATCH --nodelist=worker7
 
 srun matlab -nosplash -nodesktop -nodisplay -r "\
 cd('./cluster'); \
