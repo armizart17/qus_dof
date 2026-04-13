@@ -14,14 +14,14 @@ addpath(genpath('/opt/MATLAB Add-Ons'))
 
 %% ========================= USER CONFIG =========================
 % Choose the mu grids
-% list_mu_a = 10.^(-3:0.5:6);
-% list_mu_g = 10.^(-3:0.5:6);
-% list_mu_s = 10.^(-3:0.5:6);
+list_mu_a = 10.^(-3:0.5:6);
+list_mu_g = 10.^(-3:0.5:6);
+list_mu_s = 10.^(-3:0.5:6);
 
 % Example smaller test (best):
-list_mu_a = 10^4.1;
-list_mu_g = [1000] ;
-list_mu_s = 10^3;
+% list_mu_a = 10^4.1;
+% list_mu_g = [1000] ;
+% list_mu_s = 10^3;
 
 % Output directory
 if ispc

@@ -16,14 +16,14 @@ addpath(genpath(pwd))
 addpath(genpath('/opt/MATLAB Add-Ons'))
 
 %% ========================= USER CONFIG =========================
-% list_mu_a = 10.^(-3:0.5:6);
-% list_mu_b = 10.^(-3:0.5:6);
-% list_mu_n = 10.^(-3:0.5:6);
+list_mu_a = 10.^(-3:0.5:6);
+list_mu_b = 10.^(-3:0.5:6);
+list_mu_n = 10.^(-3:0.5:6);
 
 % Small debug example:
-list_mu_a = 10.^4;
-list_mu_b = [1000];
-list_mu_n = 10.^3;
+% list_mu_a = 10.^4;
+% list_mu_b = [1000];
+% list_mu_n = 10.^3;
 
 % Output directory
 if ispc
