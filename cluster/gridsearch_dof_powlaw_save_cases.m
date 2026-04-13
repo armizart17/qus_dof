@@ -15,6 +15,11 @@ function gridsearch_dof_powlaw_save_cases()
 clear; clc; close all;
 warning('off');
 
+cd('../'); % when you run it usually goes inside ./parentFolder/script.m
+disp(pwd)
+addpath(genpath(pwd))
+addpath(genpath('/opt/MATLAB Add-Ons'))
+
 %% ========================= USER CONFIG =========================
 % Choose the mu grids
 % list_mu_a = 10.^(-3:0.5:6);
@@ -22,7 +27,7 @@ warning('off');
 % list_mu_n = 10.^(-3:0.5:6);
 
 list_mu_a = 10^4.1;
-list_mu_b = [1000] ;
+list_mu_b = [1000, 10]; % simple test
 list_mu_n = 10^3;
 
 
@@ -226,16 +231,16 @@ end
 % Data directories
 if ispc
     % Windows (local)
-    dirData = 'C:\Users\armiz\OneDrive\Documentos\MATLAB\dataLIM';
+    dirData = 'C:\Users\armiz\OneDrive\Documentos\MATLAB\dataLIM\data4Prociencia\simus';
 elseif isunix
     % Linux cluster
-    dirData = '/home/armiz/dataLIM';  % <-- TO CHANGE ^^
+    dirData = '/mnt/nfs2/emiranda/proj/dof26/data/';  % <-- TO CHANGE ^^
 else
     error('Unknown operating system');
 end
 
-folderDataSam   = 'dx_18p75um';
-folderDataRef   = 'dx_18p75um';
+folderDataSam   = 'powLawSimu';
+folderDataRef   = 'powLawSimu';
 
 methods = {'3-DoF', '2-DoF-a', '2-DoF-b', '2-DoF-n'};
 label_methods = {'3-DoF', '2-DoF_{b,n}', '2-DoF_{n,a}', '2-DoF_{b,a}'};

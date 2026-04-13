@@ -10,6 +10,11 @@ function gridsearch_dof_gauss_powLawModel_save_cases()
 clear; clc; close all;
 warning('off');
 
+cd('../'); % when you run it usually goes inside ./parentFolder/script.m
+disp(pwd)
+addpath(genpath(pwd))
+addpath(genpath('/opt/MATLAB Add-Ons'))
+
 %% ========================= USER CONFIG =========================
 % list_mu_a = 10.^(-3:0.5:6);
 % list_mu_b = 10.^(-3:0.5:6);
@@ -140,7 +145,7 @@ if ispc
     dirData         = 'C:\Users\armiz\OneDrive\Documentos\MATLAB\dataLIM\data4Prociencia\simus';
 elseif isunix
     % Linux cluster
-    dirData = '/home/armiz/dataLIM';  % <-- TO CHANGE ^^
+    dirData = '/mnt/nfs2/emiranda/proj/dof26/data/';  % <-- TO CHANGE ^^
 else
     error('Unknown operating system');
 end
