@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=dof_grid_powLaw
-##SBATCH --output="./slurmout/slurm-%j.out"
+#SBATCH --output="./slurmout/slurm-%j.out"
 ##SBATCH --partition=thinkstation
 ##SBATCH --nodelist=worker7
 ##SBATCH --nodes=1
