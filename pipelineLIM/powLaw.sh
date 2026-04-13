@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=dof_grid_powLaw
-#SBATCH --output="./pipelinelim/out/slurm-%j.out"
+#SBATCH --output="./slurmout/slurm-%j.out"
 #SBATCH --partition=debug
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
