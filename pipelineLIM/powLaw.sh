@@ -8,6 +8,7 @@
 ##SBATCH --mem=0
 
 srun matlab -nosplash -nodesktop -nodisplay -r "\
+cd('./cluster'); \
 c=parcluster('local'); \
 numWorkers=min(c.NumWorkers, str2double(getenv('SLURM_CPUS_PER_TASK'))); \
 delete(gcp('nocreate')); \
