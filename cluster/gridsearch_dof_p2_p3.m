@@ -386,7 +386,7 @@ if ispc
     pathBSC_RPM = 'C:\Users\armiz\OneDrive\Documentos\MATLAB\dataLIM\data4Prociencia\phantoms\UIUC\RPM';
 elseif isunix
     % Linux cluster
-    pathBSC_RPM = '/mnt/nfs2/emiranda/phantoms/UIUC/RPM';  % <-- TO CHANGE ^^
+    pathBSC_RPM = '/mnt/nfs2/emiranda/data4Prociencia/phantoms/UIUC/RPM';  % <-- TO CHANGE ^^
 else
     error('Unknown operating system');
 end
