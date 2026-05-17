@@ -78,7 +78,11 @@ fprintf('Total combinations: %d\n', nComb);
 fmtExp = @(x) strrep(sprintf('%.1f', log10(x)), '.', 'p');
 
 %% Main loop
-for iComb = 1:nComb
+% EDIT NOT THAT IMPORTANT
+startIdx = 4285;
+fprintf('Starting from case %d / %d\n', startIdx, nComb);
+for iComb = startIdx:nComb
+%for iComb = 1:nComb
 
     mu_a = comb_mu_a(iComb);
     mu_g = comb_mu_g(iComb);
