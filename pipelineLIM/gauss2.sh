@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
-#SBATCH --nodelist=worker9
+##SBATCH --nodelist=worker9
 
 echo "=============================="
 echo "SLURM JOB START"
